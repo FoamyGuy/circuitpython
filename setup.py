@@ -28,7 +28,7 @@ stubs = [p.relative_to(stub_root).as_posix() for p in stub_root.glob("*.pyi")]
 #     pieces.pop()
 # version = "-".join(pieces)
 
-version = "7.0.0"
+version = "7.0.1"
 
 def build_data_files_list() -> List[tuple]:
     result = []

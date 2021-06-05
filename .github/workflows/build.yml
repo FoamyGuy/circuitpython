@@ -43,6 +43,10 @@ jobs:
       run: |
         gcc --version
         python3 --version
+    - name: Check For setup.py
+      id: need-pypi
+      run: |
+        echo ::set-output name=setup-py::$( find . -wholename './setup.py' )
 #    - name: New boards check
 #      run: python3 -u ci_new_boards_check.py
 #      working-directory: tools

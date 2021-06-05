@@ -36,7 +36,7 @@ def build_data_files_list() -> List[tuple]:
     return result
 
 setup(
-    name="circuitpython-stubs",
+    name="circuitpython-stubs-foamyguy-1",
     description="PEP 561 type stubs for CircuitPython",
     url="https://github.com/adafruit/circuitpython",
     maintainer="CircuitPythonistas",

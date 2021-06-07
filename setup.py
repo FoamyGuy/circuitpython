@@ -14,21 +14,17 @@ import re
 stub_root = Path("circuitpython-stubs")
 stubs = [p.relative_to(stub_root).as_posix() for p in stub_root.glob("*.pyi")]
 
-# git_out = subprocess.check_output(["git", "describe", "--tags"])
-# version = git_out.strip().decode("utf-8")
-#
-# # Detect a development build and mutate it to be valid semver and valid python version.
-# pieces = version.split("-")
-# if len(pieces) > 2:
-#     # Merge the commit portion onto the commit count since the tag.
-#     pieces[-2] += "+" + pieces[-1]
-#     pieces.pop()
-#     # Merge the commit count and build to the pre-release identifier.
-#     pieces[-2] += ".dev." + pieces[-1]
-#     pieces.pop()
-# version = "-".join(pieces)
+git_out = subprocess.check_output(["git", "describe", "--tags"])
+version = git_out.strip().decode("utf-8")
 
-version = "7.0.1"
+# Detect a development build and mutate it to be valid semver and valid python version.
+pieces = version.split("-")
+if len(pieces) > 2:
+    pieces.pop()
+    # Merge the commit count and build to the pre-release identifier.
+    pieces[-2] += ".dev." + pieces[-1]
+    pieces.pop()
+version = "-".join(pieces)
 
 def build_data_files_list() -> List[tuple]:
     result = []

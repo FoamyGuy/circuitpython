@@ -131,17 +131,7 @@ jobs:
         zip -9r circuitpython-stubs.zip circuitpython-stubs
         [ -z "$AWS_ACCESS_KEY_ID" ] || aws s3 cp circuitpython-stubs.zip s3://adafruit-circuit-python/bin/stubs/circuitpython-stubs-${{ env.CP_VERSION }}.zip --no-progress --region us-east-1
 
-    - name: Upload stable stubs to PyPi
-      if: github.event_name == 'release' && (github.event.action== 'published' || github.event.action == 'rerequested')
-      env:
-        TWINE_USERNAME: ${{ secrets.pypi_username }}
-        TWINE_PASSWORD: ${{ secrets.pypi_password }}
-      run: |
-        echo "Uploading stable release to PyPi"
-        python setup.py sdist
-        twine upload dist/*
-
-    - name: Upload dev stubs to PyPi
+    - name: Upload stubs to PyPi
       if: github.event_name == 'push'
       env:
         TWINE_USERNAME: ${{ secrets.pypi_username }}

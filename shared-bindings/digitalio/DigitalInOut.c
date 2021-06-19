@@ -47,7 +47,7 @@
 //|     """Digital input and output
 //|
 //|     A DigitalInOut is used to digitally control I/O pins. For analog control of
-//|     a pin, see the :py:class:`analogio.AnalogIn` and test change
+//|     a pin, see the :py:class:`analogio.AnalogIn` and
 //|     :py:class:`analogio.AnalogOut` classes."""
 //|
 //|     def __init__(self, pin: microcontroller.Pin) -> None:

@@ -82,7 +82,6 @@ typedef struct _mp_state_mem_t {
 
     int gc_stack_overflow;
     MICROPY_GC_STACK_ENTRY_TYPE gc_stack[MICROPY_ALLOC_GC_STACK_SIZE];
-    uint16_t gc_lock_depth;
 
     // This variable controls auto garbage collection.  If set to false then the
     // GC won't automatically run when gc_alloc can't find enough blocks.  But
@@ -121,6 +120,9 @@ typedef struct _mp_state_vm_t {
 
     qstr_pool_t *last_pool;
 
+    // non-heap memory for creating a traceback if we can't allocate RAM
+    mp_obj_traceback_t mp_emergency_traceback_obj;
+
     // non-heap memory for creating an exception if we can't allocate RAM
     mp_obj_exception_t mp_emergency_exception_obj;
 
@@ -138,10 +140,14 @@ typedef struct _mp_state_vm_t {
     #if MICROPY_KBD_EXCEPTION
     // exception object of type KeyboardInterrupt
     mp_obj_exception_t mp_kbd_exception;
+    // traceback object to store traceback
+    mp_obj_traceback_t mp_kbd_traceback;
     #endif
 
     // exception object of type ReloadException
     mp_obj_exception_t mp_reload_exception;
+    // traceback object to store traceback
+    mp_obj_traceback_t mp_reload_traceback;
 
     // dictionary with loaded modules (may be exposed as sys.modules)
     mp_obj_dict_t mp_loaded_modules_dict;
@@ -252,6 +258,9 @@ typedef struct _mp_state_thread_t {
     uint8_t *pystack_end;
     uint8_t *pystack_cur;
     #endif
+
+    // Locking of the GC is done per thread.
+    uint16_t gc_lock_depth;
 
     ////////////////////////////////////////////////////////////
     // START ROOT POINTER SECTION

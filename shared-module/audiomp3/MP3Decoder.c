@@ -295,9 +295,9 @@ bool audiomp3_mp3file_samples_signed(audiomp3_mp3file_obj_t *self) {
 }
 
 void audiomp3_mp3file_reset_buffer(audiomp3_mp3file_obj_t *self,
-    bool single_channel,
+    bool single_channel_output,
     uint8_t channel) {
-    if (single_channel && channel == 1) {
+    if (single_channel_output && channel == 1) {
         return;
     }
     // We don't reset the buffer index in case we're looping and we have an odd number of buffer
@@ -314,14 +314,15 @@ void audiomp3_mp3file_reset_buffer(audiomp3_mp3file_obj_t *self,
 }
 
 audioio_get_buffer_result_t audiomp3_mp3file_get_buffer(audiomp3_mp3file_obj_t *self,
-    bool single_channel,
+    bool single_channel_output,
     uint8_t channel,
     uint8_t **bufptr,
     uint32_t *buffer_length) {
     if (!self->inbuf) {
+        *buffer_length = 0;
         return GET_BUFFER_ERROR;
     }
-    if (!single_channel) {
+    if (!single_channel_output) {
         channel = 0;
     }
 
@@ -342,12 +343,18 @@ audioio_get_buffer_result_t audiomp3_mp3file_get_buffer(audiomp3_mp3file_obj_t *
 
     mp3file_skip_id3v2(self);
     if (!mp3file_find_sync_word(self)) {
+        *buffer_length = 0;
         return self->eof ? GET_BUFFER_DONE : GET_BUFFER_ERROR;
     }
     int bytes_left = BYTES_LEFT(self);
     uint8_t *inbuf = READ_PTR(self);
     int err = MP3Decode(self->decoder, &inbuf, &bytes_left, buffer, 0);
     CONSUME(self, BYTES_LEFT(self) - bytes_left);
+
+    if (err) {
+        *buffer_length = 0;
+        return GET_BUFFER_DONE;
+    }
 
     if (self->inbuf_offset >= 512) {
         background_callback_add(
@@ -356,20 +363,16 @@ audioio_get_buffer_result_t audiomp3_mp3file_get_buffer(audiomp3_mp3file_obj_t *
             self);
     }
 
-    if (err) {
-        return GET_BUFFER_DONE;
-    }
-
     return GET_BUFFER_MORE_DATA;
 }
 
-void audiomp3_mp3file_get_buffer_structure(audiomp3_mp3file_obj_t *self, bool single_channel,
+void audiomp3_mp3file_get_buffer_structure(audiomp3_mp3file_obj_t *self, bool single_channel_output,
     bool *single_buffer, bool *samples_signed,
     uint32_t *max_buffer_length, uint8_t *spacing) {
     *single_buffer = false;
     *samples_signed = true;
     *max_buffer_length = self->frame_buffer_size;
-    if (single_channel) {
+    if (single_channel_output) {
         *spacing = self->channel_count;
     } else {
         *spacing = 1;

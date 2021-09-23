@@ -38,20 +38,18 @@
 //| class Group:
 //|     """Manage a group of sprites and groups and how they are inter-related."""
 //|
-//|     def __init__(self, *, max_size: int = 4, scale: int = 1, x: int = 0, y: int = 0) -> None:
+//|     def __init__(self, *, scale: int = 1, x: int = 0, y: int = 0) -> None:
 //|         """Create a Group of a given size and scale. Scale is in one dimension. For example, scale=2
 //|         leads to a layer's pixel being 2x2 pixels when in the group.
 //|
-//|         :param int max_size: Ignored. Will be removed in 7.x.
 //|         :param int scale: Scale of layer pixels in one dimension.
 //|         :param int x: Initial x position within the parent.
 //|         :param int y: Initial y position within the parent."""
 //|         ...
 //|
 STATIC mp_obj_t displayio_group_make_new(const mp_obj_type_t *type, size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
-    enum { ARG_max_size, ARG_scale, ARG_x, ARG_y };
+    enum { ARG_scale, ARG_x, ARG_y };
     static const mp_arg_t allowed_args[] = {
-        { MP_QSTR_max_size, MP_ARG_INT | MP_ARG_KW_ONLY, {.u_int = 4} },
         { MP_QSTR_scale, MP_ARG_INT | MP_ARG_KW_ONLY, {.u_int = 1} },
         { MP_QSTR_x, MP_ARG_INT | MP_ARG_KW_ONLY, {.u_int = 0} },
         { MP_QSTR_y, MP_ARG_INT | MP_ARG_KW_ONLY, {.u_int = 0} },
@@ -185,7 +183,7 @@ const mp_obj_property_t displayio_group_y_obj = {
               MP_ROM_NONE},
 };
 
-//|     def append(self, layer: Union[vectorio.VectorShape, Group, TileGrid]) -> None:
+//|     def append(self, layer: Union[vectorio.Circle, vectorio.Rectangle, vectorio.Polygon, Group, TileGrid]) -> None:
 //|         """Append a layer to the group. It will be drawn above other layers."""
 //|         ...
 //|
@@ -196,7 +194,7 @@ STATIC mp_obj_t displayio_group_obj_append(mp_obj_t self_in, mp_obj_t layer) {
 }
 MP_DEFINE_CONST_FUN_OBJ_2(displayio_group_append_obj, displayio_group_obj_append);
 
-//|     def insert(self, index: int, layer: Union[vectorio.VectorShape, Group, TileGrid]) -> None:
+//|     def insert(self, index: int, layer: Union[vectorio.Circle, vectorio.Rectangle, vectorio.Polygon, Group, TileGrid]) -> None:
 //|         """Insert a layer into the group."""
 //|         ...
 //|
@@ -212,7 +210,7 @@ STATIC mp_obj_t displayio_group_obj_insert(mp_obj_t self_in, mp_obj_t index_obj,
 MP_DEFINE_CONST_FUN_OBJ_3(displayio_group_insert_obj, displayio_group_obj_insert);
 
 
-//|     def index(self, layer: Union[vectorio.VectorShape, Group, TileGrid]) -> int:
+//|     def index(self, layer: Union[vectorio.Circle, vectorio.Rectangle, vectorio.Polygon, Group, TileGrid]) -> int:
 //|         """Returns the index of the first copy of layer. Raises ValueError if not found."""
 //|         ...
 //|
@@ -226,7 +224,7 @@ STATIC mp_obj_t displayio_group_obj_index(mp_obj_t self_in, mp_obj_t layer) {
 }
 MP_DEFINE_CONST_FUN_OBJ_2(displayio_group_index_obj, displayio_group_obj_index);
 
-//|     def pop(self, i: int = -1) -> Union[vectorio.VectorShape, Group, TileGrid]:
+//|     def pop(self, i: int = -1) -> Union[vectorio.Circle, vectorio.Rectangle, vectorio.Polygon, Group, TileGrid]:
 //|         """Remove the ith item and return it."""
 //|         ...
 //|
@@ -249,7 +247,7 @@ STATIC mp_obj_t displayio_group_obj_pop(size_t n_args, const mp_obj_t *pos_args,
 MP_DEFINE_CONST_FUN_OBJ_KW(displayio_group_pop_obj, 1, displayio_group_obj_pop);
 
 
-//|     def remove(self, layer: Union[vectorio.VectorShape, Group, TileGrid]) -> None:
+//|     def remove(self, layer: Union[vectorio.Circle, vectorio.Rectangle, vectorio.Polygon, Group, TileGrid]) -> None:
 //|         """Remove the first copy of layer. Raises ValueError if it is not present."""
 //|         ...
 //|
@@ -282,7 +280,7 @@ STATIC mp_obj_t group_unary_op(mp_unary_op_t op, mp_obj_t self_in) {
     }
 }
 
-//|     def __getitem__(self, index: int) -> Union[vectorio.VectorShape, Group, TileGrid]:
+//|     def __getitem__(self, index: int) -> Union[vectorio.Circle, vectorio.Rectangle, vectorio.Polygon, Group, TileGrid]:
 //|         """Returns the value at the given index.
 //|
 //|         This allows you to::
@@ -290,7 +288,7 @@ STATIC mp_obj_t group_unary_op(mp_unary_op_t op, mp_obj_t self_in) {
 //|           print(group[0])"""
 //|         ...
 //|
-//|     def __setitem__(self, index: int, value: Union[vectorio.VectorShape, Group, TileGrid]) -> None:
+//|     def __setitem__(self, index: int, value: Union[vectorio.Circle, vectorio.Rectangle, vectorio.Polygon, Group, TileGrid]) -> None:
 //|         """Sets the value at the given index.
 //|
 //|         This allows you to::
@@ -337,7 +335,7 @@ STATIC mp_obj_t displayio_group_obj_sort(size_t n_args, const mp_obj_t *pos_args
         args[i] = pos_args[i];
     }
     args[0] = MP_OBJ_FROM_PTR(self->members);
-    return mp_obj_list_sort(n_args, pos_args, kw_args);
+    return mp_obj_list_sort(n_args, args, kw_args);
 }
 MP_DEFINE_CONST_FUN_OBJ_KW(displayio_group_sort_obj, 1, displayio_group_obj_sort);
 
@@ -357,10 +355,13 @@ STATIC MP_DEFINE_CONST_DICT(displayio_group_locals_dict, displayio_group_locals_
 
 const mp_obj_type_t displayio_group_type = {
     { &mp_type_type },
+    .flags = MP_TYPE_FLAG_EXTENDED,
     .name = MP_QSTR_Group,
     .make_new = displayio_group_make_new,
-    .subscr = group_subscr,
-    .unary_op = group_unary_op,
-    .getiter = mp_obj_new_generic_iterator,
     .locals_dict = (mp_obj_dict_t *)&displayio_group_locals_dict,
+    MP_TYPE_EXTENDED_FIELDS(
+        .subscr = group_subscr,
+        .unary_op = group_unary_op,
+        .getiter = mp_obj_new_generic_iterator,
+        ),
 };

@@ -76,6 +76,7 @@ INC += -I. \
        -isystem sdk/src/rp2_common/hardware_base/include/ \
        -isystem sdk/src/rp2_common/hardware_claim/include/ \
        -isystem sdk/src/rp2_common/hardware_clocks/include/ \
+       -isystem sdk/src/rp2_common/hardware_divider/include/ \
        -isystem sdk/src/rp2_common/hardware_dma/include/ \
        -isystem sdk/src/rp2_common/hardware_flash/include/ \
        -isystem sdk/src/rp2_common/hardware_gpio/include/ \
@@ -116,7 +117,7 @@ CFLAGS += $(OPTIMIZATION_FLAGS)
 
 #Debugging/Optimization
 ifeq ($(DEBUG), 1)
-  CFLAGS += -ggdb3 -Og
+  CFLAGS += -ggdb3 -O3
   # No LTO because we may place some functions in RAM instead of flash.
 else
   CFLAGS += -DNDEBUG
@@ -212,7 +213,7 @@ SRC_SHARED_MODULE_EXPANDED = $(addprefix shared-bindings/, $(SRC_SHARED_MODULE))
                              $(addprefix shared-module/, $(SRC_SHARED_MODULE_INTERNAL))
 
 # There may be duplicates between SRC_COMMON_HAL_EXPANDED and SRC_SHARED_MODULE_EXPANDED,
-# because a few modules have files both in common-hal/ and shared-modules/.
+# because a few modules have files both in common-hal/ and shared-module/.
 # Doing a $(sort ...) removes duplicates as part of sorting.
 SRC_COMMON_HAL_SHARED_MODULE_EXPANDED = $(sort $(SRC_COMMON_HAL_EXPANDED) $(SRC_SHARED_MODULE_EXPANDED))
 
@@ -258,6 +259,12 @@ $(BUILD)/boot2.bin: $(BUILD)/boot2.elf
 $(BUILD)/stage2.c: stage2.c.jinja gen_stage2.py | $(BUILD)/
 	$(STEPECHO) "GEN $<"
 	$(Q)$(PYTHON3) gen_stage2.py $< $@ $(EXTERNAL_FLASH_DEVICES)
+
+$(HEADER_BUILD)/flash_info.h: flash_info.h.jinja gen_stage2.py | $(HEADER_BUILD)/
+	$(STEPECHO) "GEN $<"
+	$(Q)$(PYTHON3) gen_stage2.py $< $@ $(EXTERNAL_FLASH_DEVICES)
+
+$(BUILD)/supervisor/internal_flash.o: $(HEADER_BUILD)/flash_info.h
 
 $(BUILD)/boot2.elf: $(BUILD)/stage2.c
 	$(STEPECHO) "BOOT $<"

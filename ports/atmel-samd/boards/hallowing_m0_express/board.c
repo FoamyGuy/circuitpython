@@ -72,6 +72,7 @@ void board_init(void) {
     displayio_fourwire_obj_t *bus = &displays[0].fourwire_bus;
     bus->base.type = &displayio_fourwire_type;
     busio_spi_obj_t *spi = common_hal_board_create_spi();
+    common_hal_busio_spi_never_reset(spi);
     common_hal_displayio_fourwire_construct(bus,
         spi,
         &pin_PA28, // Command or data
@@ -99,7 +100,6 @@ void board_init(void) {
         MIPI_COMMAND_SET_COLUMN_ADDRESS, // Set column command
         MIPI_COMMAND_SET_PAGE_ADDRESS, // Set row command
         MIPI_COMMAND_WRITE_MEMORY_START, // Write memory command
-        0x37, // set vertical scroll command
         display_init_sequence,
         sizeof(display_init_sequence),
         &pin_PA00,

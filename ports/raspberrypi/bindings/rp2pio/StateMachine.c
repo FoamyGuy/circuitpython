@@ -80,12 +80,13 @@
 //|                  initial_sideset_pin_direction: int = 0x1f,
 //|                  exclusive_pin_use: bool = True,
 //|                  auto_pull: bool = False,
-//|                  pull_threshold : int = 32,
-//|                  out_shift_right : bool = True,
+//|                  pull_threshold: int = 32,
+//|                  out_shift_right: bool = True,
 //|                  wait_for_txstall: bool = True,
 //|                  auto_push: bool = False,
-//|                  push_threshold : int = 32,
-//|                  in_shift_right : bool = True) -> None:
+//|                  push_threshold: int = 32,
+//|                  in_shift_right: bool = True,
+//|                  user_interruptible: bool = True) -> None:
 //|
 //|         """Construct a StateMachine object on the given pins with the given program.
 //|
@@ -109,6 +110,7 @@
 //|         :param int sideset_pin_count: the count of consecutive pins to use with a side set starting at first_sideset_pin
 //|         :param int initial_sideset_pin_state: the initial output value for sideset pins starting at first_sideset_pin
 //|         :param int initial_sideset_pin_direction: the initial output direction for sideset pins starting at first_sideset_pin
+//|         :param ~microcontroller.Pin jmp_pin: the pin which determines the branch taken by JMP PIN instructions
 //|         :param bool exclusive_pin_use: When True, do not share any pins with other state machines. Pins are never shared with other peripherals
 //|         :param bool auto_pull: When True, automatically load data from the tx FIFO into the
 //|             output shift register (OSR) when an OUT instruction shifts more than pull_threshold bits
@@ -125,7 +127,14 @@
 //|         :param int push_threshold: Number of bits to shift before saving the ISR value to the RX FIFO
 //|         :param bool in_shift_right: When True, data is shifted into the right side (LSB) of the
 //|             ISR. It is shifted into the left (MSB) otherwise. NOTE! This impacts data alignment
-//|             when the number of bytes is not a power of two (1, 2 or 4 bytes)."""
+//|             when the number of bytes is not a power of two (1, 2 or 4 bytes).
+//|         :param bool user_interruptible: When True (the default),
+//|             `write()`, `readinto()`, and `write_readinto()` can be interrupted by a ctrl-C.
+//|             This is useful when developing a PIO program: if there is an error in the program
+//|             that causes an infinite loop, you will be able to interrupt the loop.
+//|             However, if you are writing to a device that can get into a bad state if a read or write
+//|             is interrupted, you may want to set this to False after your program has been vetted.
+//|         """
 //|         ...
 //|
 
@@ -138,10 +147,12 @@ STATIC mp_obj_t rp2pio_statemachine_make_new(const mp_obj_type_t *type, size_t n
            ARG_pull_in_pin_up, ARG_pull_in_pin_down,
            ARG_first_set_pin, ARG_set_pin_count, ARG_initial_set_pin_state, ARG_initial_set_pin_direction,
            ARG_first_sideset_pin, ARG_sideset_pin_count, ARG_initial_sideset_pin_state, ARG_initial_sideset_pin_direction,
+           ARG_jmp_pin,
            ARG_exclusive_pin_use,
            ARG_auto_pull, ARG_pull_threshold, ARG_out_shift_right,
            ARG_wait_for_txstall,
-           ARG_auto_push, ARG_push_threshold, ARG_in_shift_right};
+           ARG_auto_push, ARG_push_threshold, ARG_in_shift_right,
+           ARG_user_interruptible,};
     static const mp_arg_t allowed_args[] = {
         { MP_QSTR_program, MP_ARG_REQUIRED | MP_ARG_OBJ },
         { MP_QSTR_frequency, MP_ARG_REQUIRED | MP_ARG_INT },
@@ -167,6 +178,8 @@ STATIC mp_obj_t rp2pio_statemachine_make_new(const mp_obj_type_t *type, size_t n
         { MP_QSTR_initial_sideset_pin_state, MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int = 0} },
         { MP_QSTR_initial_sideset_pin_direction, MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int = 0x1f} },
 
+        { MP_QSTR_jmp_pin, MP_ARG_KW_ONLY | MP_ARG_OBJ, {.u_obj = mp_const_none} },
+
         { MP_QSTR_exclusive_pin_use, MP_ARG_KW_ONLY | MP_ARG_BOOL, {.u_bool = true} },
         { MP_QSTR_auto_pull, MP_ARG_KW_ONLY | MP_ARG_BOOL, {.u_bool = false} },
         { MP_QSTR_pull_threshold, MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int = 32} },
@@ -175,6 +188,7 @@ STATIC mp_obj_t rp2pio_statemachine_make_new(const mp_obj_type_t *type, size_t n
         { MP_QSTR_auto_push, MP_ARG_KW_ONLY | MP_ARG_BOOL, {.u_bool = false} },
         { MP_QSTR_push_threshold, MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int = 32} },
         { MP_QSTR_in_shift_right, MP_ARG_KW_ONLY | MP_ARG_BOOL, {.u_bool = true} },
+        { MP_QSTR_user_interruptible, MP_ARG_KW_ONLY | MP_ARG_BOOL, {.u_bool = true} },
     };
     mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
     mp_arg_parse_all(n_args, pos_args, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
@@ -210,6 +224,8 @@ STATIC mp_obj_t rp2pio_statemachine_make_new(const mp_obj_type_t *type, size_t n
         mp_raise_ValueError(translate("Side set pin count must be between 1 and 5"));
     }
 
+    const mcu_pin_obj_t *jmp_pin = validate_obj_is_pin_or_none(args[ARG_jmp_pin].u_obj);
+
     mp_int_t pull_threshold = args[ARG_pull_threshold].u_int;
     mp_int_t push_threshold = args[ARG_push_threshold].u_int;
     if (pull_threshold < 1 || pull_threshold > 32) {
@@ -241,11 +257,13 @@ STATIC mp_obj_t rp2pio_statemachine_make_new(const mp_obj_type_t *type, size_t n
         first_in_pin, args[ARG_in_pin_count].u_int, args[ARG_pull_in_pin_up].u_int, args[ARG_pull_in_pin_down].u_int,
         first_set_pin, args[ARG_set_pin_count].u_int, args[ARG_initial_set_pin_state].u_int, args[ARG_initial_set_pin_direction].u_int,
         first_sideset_pin, args[ARG_sideset_pin_count].u_int, args[ARG_initial_sideset_pin_state].u_int, args[ARG_initial_sideset_pin_direction].u_int,
+        jmp_pin,
         0,
         args[ARG_exclusive_pin_use].u_bool,
         args[ARG_auto_pull].u_bool, pull_threshold, args[ARG_out_shift_right].u_bool,
         args[ARG_wait_for_txstall].u_bool,
-        args[ARG_auto_push].u_bool, push_threshold, args[ARG_in_shift_right].u_bool);
+        args[ARG_auto_push].u_bool, push_threshold, args[ARG_in_shift_right].u_bool,
+        args[ARG_user_interruptible].u_bool);
     return MP_OBJ_FROM_PTR(self);
 }
 

@@ -84,13 +84,13 @@ void common_hal_rotaryio_incrementalencoder_construct(rotaryio_incrementalencode
         3, 0, // in pulls
         NULL, 0, 0, 0x1f, // set pins
         NULL, 0, 0, 0x1f, // sideset pins
+        NULL, // jump pin
         0, // wait gpio pins
         true, // exclusive pin use
         false, 32, false, // out settings
         false, // Wait for txstall
-        false, 32, false); // in settings
-
-    common_hal_rp2pio_statemachine_run(&self->state_machine, encoder_init, MP_ARRAY_SIZE(encoder_init));
+        false, 32, false, // in settings
+        false); // Not user-interruptible.
 
     // We're guaranteed by the init code that some output will be available promptly
     uint8_t quiescent_state;

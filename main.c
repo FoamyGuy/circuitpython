@@ -56,6 +56,7 @@
 #include "supervisor/shared/safe_mode.h"
 #include "supervisor/shared/stack.h"
 #include "supervisor/shared/status_leds.h"
+#include "supervisor/shared/traceback.h"
 #include "supervisor/shared/translate.h"
 #include "supervisor/shared/workflow.h"
 #include "supervisor/usb.h"
@@ -69,9 +70,13 @@
 #include "shared-bindings/alarm/__init__.h"
 #endif
 
+#if CIRCUITPY_ATEXIT
+#include "shared-module/atexit/__init__.h"
+#endif
+
 #if CIRCUITPY_BLEIO
 #include "shared-bindings/_bleio/__init__.h"
-#include "supervisor/shared/bluetooth.h"
+#include "supervisor/shared/bluetooth/bluetooth.h"
 #endif
 
 #if CIRCUITPY_BOARD
@@ -86,12 +91,12 @@
 #include "shared-module/displayio/__init__.h"
 #endif
 
-#if CIRCUITPY_MEMORYMONITOR
-#include "shared-module/memorymonitor/__init__.h"
+#if CIRCUITPY_KEYPAD
+#include "shared-module/keypad/__init__.h"
 #endif
 
-#if CIRCUITPY_NETWORK
-#include "shared-module/network/__init__.h"
+#if CIRCUITPY_MEMORYMONITOR
+#include "shared-module/memorymonitor/__init__.h"
 #endif
 
 #if CIRCUITPY_USB_HID
@@ -100,6 +105,11 @@
 
 #if CIRCUITPY_WIFI
 #include "shared-bindings/wifi/__init__.h"
+#endif
+
+#if CIRCUITPY_BOOT_COUNTER
+#include "shared-bindings/nvm/ByteArray.h"
+uint8_t value_out = 0;
 #endif
 
 #if MICROPY_ENABLE_PYSTACK
@@ -164,17 +174,9 @@ STATIC void start_mp(supervisor_allocation* heap) {
     // Reset alarm module only after we retrieved the wakeup alarm.
     alarm_reset();
     #endif
-
-    #if CIRCUITPY_NETWORK
-    network_module_init();
-    #endif
 }
 
 STATIC void stop_mp(void) {
-    #if CIRCUITPY_NETWORK
-    network_module_deinit();
-    #endif
-
     #if MICROPY_VFS
     mp_vfs_mount_t *vfs = MP_STATE_VM(vfs_mount_table);
 
@@ -215,24 +217,65 @@ STATIC bool maybe_run_list(const char * const * filenames, pyexec_result_t* exec
         return false;
     }
     mp_hal_stdout_tx_str(filename);
-    const compressed_string_t* compressed = translate(" output:\n");
-    char decompressed[decompress_length(compressed)];
-    decompress(compressed, decompressed);
-    mp_hal_stdout_tx_str(decompressed);
+    serial_write_compressed(translate(" output:\n"));
     pyexec_file(filename, exec_result);
+    #if CIRCUITPY_ATEXIT
+    shared_module_atexit_execute(exec_result);
+    #endif
     return true;
 }
 
-STATIC void cleanup_after_vm(supervisor_allocation* heap) {
+STATIC void count_strn(void *data, const char *str, size_t len) {
+    *(size_t*)data += len;
+}
+
+STATIC void cleanup_after_vm(supervisor_allocation* heap, mp_obj_t exception) {
+    // Get the traceback of any exception from this run off the heap.
+    // MP_OBJ_SENTINEL means "this run does not contribute to traceback storage, don't touch it"
+    // MP_OBJ_NULL (=0) means "this run completed successfully, clear any stored traceback"
+    if (exception != MP_OBJ_SENTINEL) {
+        free_memory(prev_traceback_allocation);
+        // ReloadException is exempt from traceback printing in pyexec_file(), so treat it as "no
+        // traceback" here too.
+        if (exception && exception != MP_OBJ_FROM_PTR(&MP_STATE_VM(mp_reload_exception))) {
+            size_t traceback_len = 0;
+            mp_print_t print_count = {&traceback_len, count_strn};
+            mp_obj_print_exception(&print_count, exception);
+            prev_traceback_allocation = allocate_memory(align32_size(traceback_len + 1), false, true);
+            // Empirically, this never fails in practice - even when the heap is totally filled up
+            // with single-block-sized objects referenced by a root pointer, exiting the VM frees
+            // up several hundred bytes, sufficient for the traceback (which tends to be shortened
+            // because there wasn't memory for the full one). There may be convoluted ways of
+            // making it fail, but at this point I believe they are not worth spending code on.
+            if (prev_traceback_allocation != NULL) {
+                vstr_t vstr;
+                vstr_init_fixed_buf(&vstr, traceback_len, (char*)prev_traceback_allocation->ptr);
+                mp_print_t print = {&vstr, (mp_print_strn_t)vstr_add_strn};
+                mp_obj_print_exception(&print, exception);
+                ((char*)prev_traceback_allocation->ptr)[traceback_len] = '\0';
+            }
+        }
+        else {
+            prev_traceback_allocation = NULL;
+        }
+    }
+
     // Reset port-independent devices, like CIRCUITPY_BLEIO_HCI.
     reset_devices();
+
+    #if CIRCUITPY_ATEXIT
+    atexit_reset();
+    #endif
+
     // Turn off the display and flush the filesystem before the heap disappears.
     #if CIRCUITPY_DISPLAYIO
     reset_displays();
     #endif
+
     #if CIRCUITPY_MEMORYMONITOR
     memorymonitor_reset();
     #endif
+
     filesystem_flush();
     stop_mp();
     free_memory(heap);
@@ -240,6 +283,10 @@ STATIC void cleanup_after_vm(supervisor_allocation* heap) {
 
     #if CIRCUITPY_CANIO
     common_hal_canio_reset();
+    #endif
+
+    #if CIRCUITPY_KEYPAD
+    keypad_reset();
     #endif
 
     // reset_board_busses() first because it may release pins from the never_reset state, so that
@@ -277,10 +324,15 @@ STATIC bool run_code_py(safe_mode_t safe_mode) {
     pyexec_result_t result;
 
     result.return_code = 0;
-    result.exception_type = NULL;
+    result.exception = MP_OBJ_NULL;
     result.exception_line = 0;
 
+    bool skip_repl;
+    bool skip_wait = false;
     bool found_main = false;
+    uint8_t next_code_options = 0;
+    // Collects stickiness bits that apply in the current situation.
+    uint8_t next_code_stickiness_situation = SUPERVISOR_NEXT_CODE_OPT_NEWLY_SET;
 
     if (safe_mode == NO_SAFE_MODE) {
         static const char * const supported_filenames[] = STRING_LIST(
@@ -302,31 +354,77 @@ STATIC bool run_code_py(safe_mode_t safe_mode) {
         usb_setup_with_vm();
         #endif
 
-        // This is where the user's python code is actually executed:
-        found_main = maybe_run_list(supported_filenames, &result);
-        // If that didn't work, double check the extensions
-        #if CIRCUITPY_FULL_BUILD
-        if (!found_main){
-            found_main = maybe_run_list(double_extension_filenames, &result);
-            if (found_main) {
-                serial_write_compressed(translate("WARNING: Your code filename has two extensions\n"));
+        // Check if a different run file has been allocated
+        if (next_code_allocation) {
+            ((next_code_info_t*)next_code_allocation->ptr)->options &= ~SUPERVISOR_NEXT_CODE_OPT_NEWLY_SET;
+            next_code_options = ((next_code_info_t*)next_code_allocation->ptr)->options;
+            if (((next_code_info_t*)next_code_allocation->ptr)->filename[0] != '\0') {
+                const char* next_list[] = {((next_code_info_t*)next_code_allocation->ptr)->filename, ""};
+                // This is where the user's python code is actually executed:
+                found_main = maybe_run_list(next_list, &result);
+                if (!found_main) {
+                    serial_write(((next_code_info_t*)next_code_allocation->ptr)->filename);
+                    serial_write_compressed(translate(" not found.\n"));
+                }
             }
         }
-        #else
-        (void) found_main;
-        #endif
-
-        // Finished executing python code. Cleanup includes a board reset.
-        cleanup_after_vm(heap);
-
-        if (result.return_code & PYEXEC_FORCED_EXIT) {
-            return reload_requested;
+        // Otherwise, default to the standard list of filenames
+        if (!found_main) {
+            // This is where the user's python code is actually executed:
+            found_main = maybe_run_list(supported_filenames, &result);
+            // If that didn't work, double check the extensions
+            #if CIRCUITPY_FULL_BUILD
+            if (!found_main){
+                found_main = maybe_run_list(double_extension_filenames, &result);
+                if (found_main) {
+                    serial_write_compressed(translate("WARNING: Your code filename has two extensions\n"));
+                }
+            }
+            #else
+            (void) found_main;
+            #endif
         }
 
+        // Print done before resetting everything so that we get the message over
+        // BLE before it is reset and we have a delay before reconnect.
         if (reload_requested && result.return_code == PYEXEC_EXCEPTION) {
             serial_write_compressed(translate("\nCode stopped by auto-reload.\n"));
         } else {
             serial_write_compressed(translate("\nCode done running.\n"));
+        }
+
+        // Finished executing python code. Cleanup includes a board reset.
+        cleanup_after_vm(heap, result.exception);
+
+        // If a new next code file was set, that is a reason to keep it (obviously). Stuff this into
+        // the options because it can be treated like any other reason-for-stickiness bit. The
+        // source is different though: it comes from the options that will apply to the next run,
+        // while the rest of next_code_options is what applied to this run.
+        if (next_code_allocation != NULL && (((next_code_info_t*)next_code_allocation->ptr)->options & SUPERVISOR_NEXT_CODE_OPT_NEWLY_SET)) {
+            next_code_options |= SUPERVISOR_NEXT_CODE_OPT_NEWLY_SET;
+        }
+
+        if (reload_requested) {
+            next_code_stickiness_situation |= SUPERVISOR_NEXT_CODE_OPT_STICKY_ON_RELOAD;
+        } else if (result.return_code == 0) {
+            next_code_stickiness_situation |= SUPERVISOR_NEXT_CODE_OPT_STICKY_ON_SUCCESS;
+            if (next_code_options & SUPERVISOR_NEXT_CODE_OPT_RELOAD_ON_SUCCESS) {
+                skip_repl = true;
+                skip_wait = true;
+            }
+        } else {
+            next_code_stickiness_situation |= SUPERVISOR_NEXT_CODE_OPT_STICKY_ON_ERROR;
+            // Deep sleep cannot be skipped
+            // TODO: settings in deep sleep should persist, using a new sleep memory API
+            if (next_code_options & SUPERVISOR_NEXT_CODE_OPT_RELOAD_ON_ERROR
+                && !(result.return_code & PYEXEC_DEEP_SLEEP)) {
+                skip_repl = true;
+                skip_wait = true;
+            }
+        }
+        if (result.return_code & PYEXEC_FORCED_EXIT) {
+            skip_repl = reload_requested;
+            skip_wait = true;
         }
     }
 
@@ -368,12 +466,17 @@ STATIC bool run_code_py(safe_mode_t safe_mode) {
     #if CIRCUITPY_ALARM
     bool fake_sleeping = false;
     #endif
-    bool skip_repl = false;
-    while (true) {
+    while (!skip_wait) {
         RUN_BACKGROUND_TASKS;
 
         // If a reload was requested by the supervisor or autoreload, return
         if (reload_requested) {
+            next_code_stickiness_situation |= SUPERVISOR_NEXT_CODE_OPT_STICKY_ON_RELOAD;
+            // Should the STICKY_ON_SUCCESS and STICKY_ON_ERROR bits be cleared in
+            // next_code_stickiness_situation? I can see arguments either way, but I'm deciding
+            // "no" for now, mainly because it's a bit less code. At this point, we have both a
+            // success or error and a reload, so let's have both of the respective options take
+            // effect (in OR combination).
             reload_requested = false;
             skip_repl = true;
             break;
@@ -508,6 +611,13 @@ STATIC bool run_code_py(safe_mode_t safe_mode) {
             port_idle_until_interrupt();
         }
     }
+
+    // free code allocation if unused
+    if ((next_code_options & next_code_stickiness_situation) == 0) {
+        free_memory(next_code_allocation);
+        next_code_allocation = NULL;
+    }
+
     // Done waiting, start the board back up.
     #if CIRCUITPY_STATUS_LED
     if (led_active) {
@@ -521,6 +631,7 @@ STATIC bool run_code_py(safe_mode_t safe_mode) {
         board_init();
     }
     #endif
+
     return skip_repl;
 }
 
@@ -534,13 +645,15 @@ STATIC void __attribute__ ((noinline)) run_boot_py(safe_mode_t safe_mode) {
         && safe_mode == NO_SAFE_MODE
         && MP_STATE_VM(vfs_mount_table) != NULL;
 
-    static const char * const boot_py_filenames[] = STRING_LIST("settings.txt", "settings.py", "boot.py", "boot.txt");
+    static const char * const boot_py_filenames[] = STRING_LIST("boot.py", "boot.txt");
     bool skip_boot_output = false;
+    #ifdef CIRCUITPY_BOOT_OUTPUT_FILE
+    FIL file_pointer;
+    #endif
 
     if (ok_to_run) {
 
         #ifdef CIRCUITPY_BOOT_OUTPUT_FILE
-        FIL file_pointer;
         boot_output_file = &file_pointer;
 
         // Get the base filesystem.
@@ -583,6 +696,9 @@ STATIC void __attribute__ ((noinline)) run_boot_py(safe_mode_t safe_mode) {
 
             // Write version info to boot_out.txt.
             mp_hal_stdout_tx_str(MICROPY_FULL_VERSION_INFO);
+            // Write the board ID (board directory and ID on circuitpython.org)
+            mp_hal_stdout_tx_str("\r\n" "Board ID:");
+            mp_hal_stdout_tx_str(CIRCUITPY_BOARD_ID);
             mp_hal_stdout_tx_str("\r\n");
         }
         #endif
@@ -600,8 +716,9 @@ STATIC void __attribute__ ((noinline)) run_boot_py(safe_mode_t safe_mode) {
     usb_set_defaults();
 #endif
 
+    pyexec_result_t result = {0, MP_OBJ_NULL, 0};
     if (ok_to_run) {
-        bool found_boot = maybe_run_list(boot_py_filenames, NULL);
+        bool found_boot = maybe_run_list(boot_py_filenames, &result);
         (void) found_boot;
 
         #ifdef CIRCUITPY_BOOT_OUTPUT_FILE
@@ -613,21 +730,18 @@ STATIC void __attribute__ ((noinline)) run_boot_py(safe_mode_t safe_mode) {
         #endif
     }
 
-
 #if CIRCUITPY_USB
-
     // Some data needs to be carried over from the USB settings in boot.py
     // to the next VM, while the heap is still available.
     // Its size can vary, so save it temporarily on the stack,
     // and then when the heap goes away, copy it in into a
     // storage_allocation.
-
     size_t size = usb_boot_py_data_size();
     uint8_t usb_boot_py_data[size];
     usb_get_boot_py_data(usb_boot_py_data, size);
 #endif
 
-    cleanup_after_vm(heap);
+    cleanup_after_vm(heap, result.exception);
 
 #if CIRCUITPY_USB
     // Now give back the data we saved from the heap going away.
@@ -646,7 +760,7 @@ STATIC int run_repl(void) {
     usb_setup_with_vm();
     #endif
 
-    autoreload_suspend();
+    autoreload_suspend(AUTORELOAD_LOCK_REPL);
 
     // Set the status LED to the REPL color before running the REPL. For
     // NeoPixels and DotStars this will be sticky but for PWM or single LED it
@@ -662,13 +776,21 @@ STATIC int run_repl(void) {
     } else {
         exit_code = pyexec_friendly_repl();
     }
-    cleanup_after_vm(heap);
+    #if CIRCUITPY_ATEXIT
+    pyexec_result_t result;
+    shared_module_atexit_execute(&result);
+    if (result.return_code == PYEXEC_DEEP_SLEEP) {
+        exit_code = PYEXEC_DEEP_SLEEP;
+    }
+    #endif
+    cleanup_after_vm(heap, MP_OBJ_SENTINEL);
     #if CIRCUITPY_STATUS_LED
     status_led_init();
     new_status_color(BLACK);
     status_led_deinit();
     #endif
-    autoreload_resume();
+
+    autoreload_resume(AUTORELOAD_LOCK_REPL);
     return exit_code;
 }
 
@@ -679,12 +801,24 @@ int __attribute__((used)) main(void) {
     // Turn on RX and TX LEDs if we have them.
     init_rxtx_leds();
 
+    #if CIRCUITPY_BOOT_COUNTER
+    // Increment counter before possibly entering safe mode
+    common_hal_nvm_bytearray_get_bytes(&common_hal_mcu_nvm_obj,0,1,&value_out);
+    ++value_out;
+    common_hal_nvm_bytearray_set_bytes(&common_hal_mcu_nvm_obj,0,&value_out,1);
+    #endif
+
     // Wait briefly to give a reset window where we'll enter safe mode after the reset.
     if (safe_mode == NO_SAFE_MODE) {
         safe_mode = wait_for_safe_mode_reset();
     }
 
     stack_init();
+
+    #if CIRCUITPY_BLEIO
+    // Early init so that a reset press can cause BLE public advertising.
+    supervisor_bluetooth_init();
+    #endif
 
     // Create a new filesystem only if we're not in a safe mode.
     // A power brownout here could make it appear as if there's
@@ -729,6 +863,7 @@ int __attribute__((used)) main(void) {
     serial_init();
 
     #if CIRCUITPY_BLEIO
+    supervisor_bluetooth_enable_workflow();
     supervisor_start_bluetooth();
     #endif
 
@@ -769,6 +904,10 @@ void gc_collect(void) {
 
     #if CIRCUITPY_ALARM
     common_hal_alarm_gc_collect();
+    #endif
+
+    #if CIRCUITPY_ATEXIT
+    atexit_gc_collect();
     #endif
 
     #if CIRCUITPY_DISPLAYIO

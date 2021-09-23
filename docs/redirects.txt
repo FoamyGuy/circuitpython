@@ -19,8 +19,8 @@ shared-bindings/_bleio/__init__.rst shared-bindings/_bleio/
 shared-bindings/_eve/__init__.rst shared-bindings/_eve/
 shared-bindings/_pew/PewPew.rst shared-bindings/_pew/#_pew.PewPew
 shared-bindings/_pew/__init__.rst shared-bindings/_pew/
-shared-bindings/_pixelbuf/PixelBuf.rst shared-bindings/_pixelbuf/#_pixelbuf.PixelBuf
-shared-bindings/_pixelbuf/__init__.rst shared-bindings/_pixelbuf/
+shared-bindings/adafruit_pixelbuf/PixelBuf.rst shared-bindings/adafruit_pixelbuf/#adafruit_pixelbuf.PixelBuf
+shared-bindings/adafruit_pixelbuf/__init__.rst shared-bindings/adafruit_pixelbuf/
 shared-bindings/_stage/Layer.rst shared-bindings/_stage/#_stage.Layer
 shared-bindings/_stage/Text.rst shared-bindings/_stage/#_stage.Text
 shared-bindings/_stage/__init__.rst shared-bindings/_stage/
@@ -71,7 +71,7 @@ shared-bindings/displayio/Group.rst shared-bindings/displayio/#displayio.Group
 shared-bindings/displayio/I2CDisplay.rst shared-bindings/displayio/#displayio.I2CDisplay
 shared-bindings/displayio/OnDiskBitmap.rst shared-bindings/displayio/#displayio.OnDiskBitmap
 shared-bindings/displayio/Palette.rst shared-bindings/displayio/#displayio.Palette
-shared-bindings/displayio/ParallelBus.rst shared-bindings/displayio/#displayio.ParallelBus
+shared-bindings/paralleldisplay/ParallelBus.rst shared-bindings/paralleldisplay/#paralleldisplay.ParallelBus
 shared-bindings/displayio/Shape.rst shared-bindings/displayio/#displayio.Shape
 shared-bindings/displayio/TileGrid.rst shared-bindings/displayio/#displayio.TileGrid
 shared-bindings/displayio/__init__.rst shared-bindings/displayio/
@@ -152,10 +152,7 @@ shared-bindings/ustack/__init__.rst shared-bindings/ustack/
 shared-bindings/vectorio/Circle.rst shared-bindings/vectorio/#vectorio.Circle
 shared-bindings/vectorio/Polygon.rst shared-bindings/vectorio/#vectorio.Polygon
 shared-bindings/vectorio/Rectangle.rst shared-bindings/vectorio/#vectorio.Rectangle
-shared-bindings/vectorio/VectorShape.rst shared-bindings/vectorio/#vectorio.VectorShape
 shared-bindings/vectorio/__init__.rst shared-bindings/vectorio/
 shared-bindings/watchdog/WatchDogMode.rst shared-bindings/watchdog/#watchdog.WatchDogMode
 shared-bindings/watchdog/WatchDogTimer.rst shared-bindings/watchdog/#watchdog.WatchDogTimer
 shared-bindings/watchdog/__init__.rst shared-bindings/watchdog/
-shared-bindings/wiznet/WIZNET5K.rst shared-bindings/wiznet/#wiznet.WIZNET5K
-shared-bindings/wiznet/__init__.rst shared-bindings/wiznet/

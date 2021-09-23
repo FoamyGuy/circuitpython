@@ -38,13 +38,16 @@
 //|
 //|     A .wav file prepped for audio playback. Only mono and stereo files are supported. Samples must
 //|     be 8 bit unsigned or 16 bit signed. If a buffer is provided, it will be used instead of allocating
-//|     an internal buffer."""
+//|     an internal buffer, which can prevent memory fragmentation."""
 //|
 //|     def __init__(self, file: typing.BinaryIO, buffer: WriteableBuffer) -> None:
 //|         """Load a .wav file for playback with `audioio.AudioOut` or `audiobusio.I2SOut`.
 //|
 //|         :param typing.BinaryIO file: Already opened wave file
-//|         :param ~_typing.WriteableBuffer buffer: Optional pre-allocated buffer, that will be split in half and used for double-buffering of the data. If not provided, two 256 byte buffers are allocated internally.
+//|         :param ~_typing.WriteableBuffer buffer: Optional pre-allocated buffer,
+//|           that will be split in half and used for double-buffering of the data.
+//|           The buffer must be 8 to 1024 bytes long.
+//|           If not provided, two 256 byte buffers are initially allocated internally.
 //|
 //|
 //|         Playing a wave file from flash::
@@ -83,7 +86,7 @@ STATIC mp_obj_t audioio_wavefile_make_new(const mp_obj_type_t *type, size_t n_ar
         mp_buffer_info_t bufinfo;
         mp_get_buffer_raise(args[1], &bufinfo, MP_BUFFER_WRITE);
         buffer = bufinfo.buf;
-        buffer_size = bufinfo.len;
+        buffer_size = mp_arg_validate_length_range(bufinfo.len, 8, 1024, MP_QSTR_buffer);
     }
     common_hal_audioio_wavefile_construct(self, MP_OBJ_TO_PTR(args[0]),
         buffer, buffer_size);
@@ -213,7 +216,10 @@ STATIC const audiosample_p_t audioio_wavefile_proto = {
 const mp_obj_type_t audioio_wavefile_type = {
     { &mp_type_type },
     .name = MP_QSTR_WaveFile,
+    .flags = MP_TYPE_FLAG_EXTENDED,
     .make_new = audioio_wavefile_make_new,
     .locals_dict = (mp_obj_dict_t *)&audioio_wavefile_locals_dict,
-    .protocol = &audioio_wavefile_proto,
+    MP_TYPE_EXTENDED_FIELDS(
+        .protocol = &audioio_wavefile_proto,
+        ),
 };

@@ -51,7 +51,7 @@
 #endif
 
 // These are in order from highest available frequency to lowest (32MHz first, then 8MHz).
-STATIC spim_peripheral_t spim_peripherals[] = {
+STATIC const spim_peripheral_t spim_peripherals[] = {
     #if NRFX_CHECK(NRFX_SPIM3_ENABLED)
     // SPIM3 exists only on nRF52840 and supports 32MHz max. All other SPIM's are only 8MHz max.
     // Allocate SPIM3 first.
@@ -269,18 +269,8 @@ bool common_hal_busio_spi_write(busio_spi_obj_t *self, const uint8_t *data, size
 }
 
 bool common_hal_busio_spi_read(busio_spi_obj_t *self, uint8_t *data, size_t len, uint8_t write_value) {
-    uint8_t *next_chunk = data;
-
-    while (len > 0) {
-        size_t chunk_size = MIN(len, self->spim_peripheral->max_xfer_size);
-        const nrfx_spim_xfer_desc_t xfer = NRFX_SPIM_XFER_RX(next_chunk, chunk_size);
-        if (nrfx_spim_xfer(&self->spim_peripheral->spim, &xfer, 0) != NRFX_SUCCESS) {
-            return false;
-        }
-        next_chunk += chunk_size;
-        len -= chunk_size;
-    }
-    return true;
+    memset(data, write_value, len);
+    return common_hal_busio_spi_transfer(self, data, data, len);
 }
 
 bool common_hal_busio_spi_transfer(busio_spi_obj_t *self, const uint8_t *data_out, uint8_t *data_in, size_t len) {

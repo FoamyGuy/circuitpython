@@ -1,17 +1,10 @@
 // More than one revision of this board is available.
-// This board specifies PCB Revision 10
+// This board specifies the most up to date PCB Revision
 
 #define MICROPY_HW_BOARD_NAME "BDMICRO VINA-D51"
 #define MICROPY_HW_MCU_NAME "samd51n20"
 
 #define CIRCUITPY_MCU_FAMILY samd51
-
-// These are pins not to reset.
-// Don't reset QSPI data pins
-#define MICROPY_PORT_A (PORT_PA08 | PORT_PA09 | PORT_PA10 | PORT_PA11)
-#define MICROPY_PORT_B (PORT_PB10 | PORT_PB11)
-#define MICROPY_PORT_C (0)
-#define MICROPY_PORT_D (0)
 
 #define BOARD_HAS_CRYSTAL 1
 

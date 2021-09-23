@@ -35,6 +35,8 @@ DEFAULT_IGNORELIST = [
     "circuitplayground_express_displayio",
     "pycubed",
     "pycubed_mram",
+    "pycubed_v05",
+    "pycubed_mram_v05",
     "pygamer",
     "pygamer_advance",
     "trinket_m0",
@@ -70,13 +72,9 @@ def configboard_files():
     """A pathlib glob search for all ports/*/boards/*/mpconfigboard.mk file
     paths.
 
-    :returns: A ``pathlib.Path.glob()`` genarator object
+    :returns: A ``pathlib.Path.glob()`` generator object
     """
-    working_dir = pathlib.Path().resolve()
-    if not working_dir.name.startswith("circuitpython"):
-        raise RuntimeError(
-            "Please run USB VID/PID duplicate verification at the " "top-level directory."
-        )
+    working_dir = pathlib.Path(__file__).resolve().parent.parent
     return working_dir.glob("ports/**/boards/**/mpconfigboard.mk")
 
 

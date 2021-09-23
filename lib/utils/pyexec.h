@@ -35,7 +35,7 @@ typedef enum {
 
 typedef struct {
     int return_code;
-    const mp_obj_type_t *exception_type;
+    mp_obj_t exception;
     int exception_line;
 } pyexec_result_t;
 
@@ -47,9 +47,8 @@ extern pyexec_mode_kind_t pyexec_mode_kind;
 extern int pyexec_system_exit;
 
 #define PYEXEC_FORCED_EXIT (0x100)
-#define PYEXEC_SWITCH_MODE (0x200)
-#define PYEXEC_EXCEPTION   (0x400)
-#define PYEXEC_DEEP_SLEEP  (0x800)
+#define PYEXEC_EXCEPTION   (0x200)
+#define PYEXEC_DEEP_SLEEP  (0x400)
 
 int pyexec_raw_repl(void);
 int pyexec_friendly_repl(void);
@@ -59,6 +58,10 @@ int pyexec_frozen_module(const char *name, pyexec_result_t *result);
 void pyexec_event_repl_init(void);
 int pyexec_event_repl_process_char(int c);
 extern uint8_t pyexec_repl_active;
+
+#if CIRCUITPY_ATEXIT
+int pyexec_exit_handler(const void *source, pyexec_result_t *result);
+#endif
 
 #if MICROPY_REPL_INFO
 mp_obj_t pyb_set_repl_info(mp_obj_t o_value);

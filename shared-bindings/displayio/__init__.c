@@ -40,7 +40,9 @@
 #include "shared-bindings/displayio/I2CDisplay.h"
 #include "shared-bindings/displayio/OnDiskBitmap.h"
 #include "shared-bindings/displayio/Palette.h"
-#include "shared-bindings/displayio/ParallelBus.h"
+#if CIRCUITPY_PARALLELDISPLAY
+#include "shared-bindings/paralleldisplay/ParallelBus.h"
+#endif
 #include "shared-bindings/displayio/Shape.h"
 #include "shared-bindings/displayio/TileGrid.h"
 
@@ -49,6 +51,8 @@
 //| The `displayio` module contains classes to manage display output
 //| including synchronizing with refresh rates and partial updating."""
 //|
+
+//| import paralleldisplay
 
 //| def release_displays() -> None:
 //|     """Releases any actively used displays so their busses and pins can be used again. This will also
@@ -70,6 +74,10 @@ MAKE_ENUM_VALUE(displayio_colorspace_type, displayio_colorspace, RGB565, DISPLAY
 MAKE_ENUM_VALUE(displayio_colorspace_type, displayio_colorspace, RGB565_SWAPPED, DISPLAYIO_COLORSPACE_RGB565_SWAPPED);
 MAKE_ENUM_VALUE(displayio_colorspace_type, displayio_colorspace, RGB555, DISPLAYIO_COLORSPACE_RGB555);
 MAKE_ENUM_VALUE(displayio_colorspace_type, displayio_colorspace, RGB555_SWAPPED, DISPLAYIO_COLORSPACE_RGB555_SWAPPED);
+MAKE_ENUM_VALUE(displayio_colorspace_type, displayio_colorspace, BGR565, DISPLAYIO_COLORSPACE_BGR565);
+MAKE_ENUM_VALUE(displayio_colorspace_type, displayio_colorspace, BGR565_SWAPPED, DISPLAYIO_COLORSPACE_BGR565_SWAPPED);
+MAKE_ENUM_VALUE(displayio_colorspace_type, displayio_colorspace, BGR555, DISPLAYIO_COLORSPACE_BGR555);
+MAKE_ENUM_VALUE(displayio_colorspace_type, displayio_colorspace, BGR555_SWAPPED, DISPLAYIO_COLORSPACE_BGR555_SWAPPED);
 
 //| class Colorspace:
 //|     """The colorspace for a `ColorConverter` to operate in"""
@@ -95,6 +103,10 @@ MAKE_ENUM_MAP(displayio_colorspace) {
     MAKE_ENUM_MAP_ENTRY(displayio_colorspace, RGB565_SWAPPED),
     MAKE_ENUM_MAP_ENTRY(displayio_colorspace, RGB555),
     MAKE_ENUM_MAP_ENTRY(displayio_colorspace, RGB555_SWAPPED),
+    MAKE_ENUM_MAP_ENTRY(displayio_colorspace, BGR565),
+    MAKE_ENUM_MAP_ENTRY(displayio_colorspace, BGR565_SWAPPED),
+    MAKE_ENUM_MAP_ENTRY(displayio_colorspace, BGR555),
+    MAKE_ENUM_MAP_ENTRY(displayio_colorspace, BGR555_SWAPPED),
 };
 STATIC MP_DEFINE_CONST_DICT(displayio_colorspace_locals_dict, displayio_colorspace_locals_table);
 
@@ -117,7 +129,9 @@ STATIC const mp_rom_map_elem_t displayio_module_globals_table[] = {
 
     { MP_ROM_QSTR(MP_QSTR_FourWire), MP_ROM_PTR(&displayio_fourwire_type) },
     { MP_ROM_QSTR(MP_QSTR_I2CDisplay), MP_ROM_PTR(&displayio_i2cdisplay_type) },
-    { MP_ROM_QSTR(MP_QSTR_ParallelBus), MP_ROM_PTR(&displayio_parallelbus_type) },
+    #if CIRCUITPY_PARALLELDISPLAY
+    { MP_ROM_QSTR(MP_QSTR_ParallelBus), MP_ROM_PTR(&paralleldisplay_parallelbus_type) },
+    #endif
 
     { MP_ROM_QSTR(MP_QSTR_release_displays), MP_ROM_PTR(&displayio_release_displays_obj) },
 };
@@ -128,3 +142,5 @@ const mp_obj_module_t displayio_module = {
     .base = { &mp_type_module },
     .globals = (mp_obj_dict_t *)&displayio_module_globals,
 };
+
+MP_REGISTER_MODULE(MP_QSTR_displayio, displayio_module, CIRCUITPY_DISPLAYIO);

@@ -59,6 +59,11 @@
     X(EISDIR) \
     X(EINVAL) \
 
+#define MICROPY_FATFS_EXFAT 0
+
+// Only support simpler HID descriptors on SAMD21.
+#define CIRCUITPY_USB_HID_MAX_REPORT_IDS_PER_DESCRIPTOR (1)
+
 #endif // SAMD21
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -92,10 +97,12 @@
 
 #ifdef SAMD21
 
+#ifndef CIRCUITPY_INTERNAL_FLASH_FILESYSTEM_SIZE
 #if INTERNAL_FLASH_FILESYSTEM
 #define CIRCUITPY_INTERNAL_FLASH_FILESYSTEM_SIZE (64 * 1024)
 #else
 #define CIRCUITPY_INTERNAL_FLASH_FILESYSTEM_SIZE (0)
+#endif
 #endif
 
 #ifndef CIRCUITPY_INTERNAL_NVM_SIZE
@@ -236,8 +243,13 @@
 
 #include "peripherals/samd/dma.h"
 
+#if CIRCUITPY_AUDIOCORE
 #define MICROPY_PORT_ROOT_POINTERS \
     CIRCUITPY_COMMON_ROOT_POINTERS \
     mp_obj_t playing_audio[AUDIO_DMA_CHANNEL_COUNT];
+#else
+#define MICROPY_PORT_ROOT_POINTERS \
+    CIRCUITPY_COMMON_ROOT_POINTERS
+#endif
 
 #endif  // __INCLUDED_MPCONFIGPORT_H

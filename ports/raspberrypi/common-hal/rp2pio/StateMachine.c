@@ -158,11 +158,14 @@ bool rp2pio_statemachine_construct(rp2pio_statemachine_obj_t *self,
     const mcu_pin_obj_t *first_set_pin, uint8_t set_pin_count,
     const mcu_pin_obj_t *first_sideset_pin, uint8_t sideset_pin_count,
     uint32_t initial_pin_state, uint32_t initial_pin_direction,
+    const mcu_pin_obj_t *jmp_pin,
     uint32_t pins_we_use, bool tx_fifo, bool rx_fifo,
     bool auto_pull, uint8_t pull_threshold, bool out_shift_right,
     bool wait_for_txstall,
     bool auto_push, uint8_t push_threshold, bool in_shift_right,
-    bool claim_pins) {
+    bool claim_pins,
+    bool user_interruptible
+    ) {
     // Create a program id that isn't the pointer so we can store it without storing the original object.
     uint32_t program_id = ~((uint32_t)program);
 
@@ -278,6 +281,9 @@ bool rp2pio_statemachine_construct(rp2pio_statemachine_obj_t *self,
         sm_config_set_sideset(&c, sideset_pin_count, false /* optional */, false /* pin direction */);
         sm_config_set_sideset_pins(&c, first_sideset_pin->number);
     }
+    if (jmp_pin != NULL) {
+        sm_config_set_jmp_pin(&c, jmp_pin->number);
+    }
     sm_config_set_wrap(&c, program_offset, program_offset + program_len - 1);
     sm_config_set_in_shift(&c, in_shift_right, auto_push, push_threshold);
     sm_config_set_out_shift(&c, out_shift_right, auto_pull, pull_threshold);
@@ -299,6 +305,7 @@ bool rp2pio_statemachine_construct(rp2pio_statemachine_obj_t *self,
     self->out_shift_right = out_shift_right;
     self->in_shift_right = in_shift_right;
     self->wait_for_txstall = wait_for_txstall;
+    self->user_interruptible = user_interruptible;
 
     self->init = init;
     self->init_len = init_len;
@@ -329,11 +336,13 @@ void common_hal_rp2pio_statemachine_construct(rp2pio_statemachine_obj_t *self,
     uint32_t pull_pin_up, uint32_t pull_pin_down,
     const mcu_pin_obj_t *first_set_pin, uint8_t set_pin_count, uint32_t initial_set_pin_state, uint32_t initial_set_pin_direction,
     const mcu_pin_obj_t *first_sideset_pin, uint8_t sideset_pin_count, uint32_t initial_sideset_pin_state, uint32_t initial_sideset_pin_direction,
+    const mcu_pin_obj_t *jmp_pin,
     uint32_t wait_gpio_mask,
     bool exclusive_pin_use,
     bool auto_pull, uint8_t pull_threshold, bool out_shift_right,
     bool wait_for_txstall,
-    bool auto_push, uint8_t push_threshold, bool in_shift_right) {
+    bool auto_push, uint8_t push_threshold, bool in_shift_right,
+    bool user_interruptible) {
 
     // First, check that all pins are free OR already in use by any PIO if exclusive_pin_use is false.
     uint32_t pins_we_use = wait_gpio_mask;
@@ -341,6 +350,7 @@ void common_hal_rp2pio_statemachine_construct(rp2pio_statemachine_obj_t *self,
     pins_we_use |= _check_pins_free(first_in_pin, in_pin_count, exclusive_pin_use);
     pins_we_use |= _check_pins_free(first_set_pin, set_pin_count, exclusive_pin_use);
     pins_we_use |= _check_pins_free(first_sideset_pin, sideset_pin_count, exclusive_pin_use);
+    pins_we_use |= _check_pins_free(jmp_pin, 1, exclusive_pin_use);
 
     // Look through the program to see what we reference and make sure it was provided.
     bool tx_fifo = false;
@@ -363,8 +373,8 @@ void common_hal_rp2pio_statemachine_construct(rp2pio_statemachine_obj_t *self,
         }
         if (instruction == pio_instr_bits_jmp) {
             uint16_t condition = (full_instruction & 0x00e0) >> 5;
-            if (condition == 0x6) { // GPIO
-                mp_raise_NotImplementedError_varg(translate("Instruction %d jumps on pin"), i);
+            if ((condition == 0x6) && (jmp_pin == NULL)) {
+                mp_raise_ValueError_varg(translate("Missing jmp_pin. Instruction %d jumps on pin"), i);
             }
         }
         if (instruction == pio_instr_bits_wait) {
@@ -476,7 +486,8 @@ void common_hal_rp2pio_statemachine_construct(rp2pio_statemachine_obj_t *self,
     if (initial_pin_direction & (pull_up | pull_down)) {
         mp_raise_ValueError(translate("pull masks conflict with direction masks"));
     }
-    bool ok = rp2pio_statemachine_construct(self,
+    bool ok = rp2pio_statemachine_construct(
+        self,
         program, program_len,
         frequency,
         init, init_len,
@@ -486,19 +497,24 @@ void common_hal_rp2pio_statemachine_construct(rp2pio_statemachine_obj_t *self,
         first_set_pin, set_pin_count,
         first_sideset_pin, sideset_pin_count,
         initial_pin_state, initial_pin_direction,
+        jmp_pin,
         pins_we_use, tx_fifo, rx_fifo,
         auto_pull, pull_threshold, out_shift_right,
         wait_for_txstall,
         auto_push, push_threshold, in_shift_right,
-        true /* claim pins */);
+        true /* claim pins */,
+        user_interruptible);
     if (!ok) {
         mp_raise_RuntimeError(translate("All state machines in use"));
     }
 }
 
 void common_hal_rp2pio_statemachine_restart(rp2pio_statemachine_obj_t *self) {
+    common_hal_rp2pio_statemachine_stop(self);
+    // Reset program counter to the original offset. A JMP is 0x0000 plus
+    // the desired offset, so we can just use self->offset.
+    pio_sm_exec(self->pio, self->state_machine,self->offset);
     pio_sm_restart(self->pio, self->state_machine);
-
     uint8_t pio_index = pio_get_index(self->pio);
     uint32_t pins_we_use = _current_sm_pins[pio_index][self->state_machine];
     pio_sm_set_pins_with_mask(self->pio, self->state_machine, self->initial_pin_state, pins_we_use);
@@ -543,6 +559,8 @@ void common_hal_rp2pio_statemachine_set_frequency(rp2pio_statemachine_obj_t *sel
 }
 
 void rp2pio_statemachine_deinit(rp2pio_statemachine_obj_t *self, bool leave_pins) {
+    common_hal_rp2pio_statemachine_stop(self);
+
     uint8_t sm = self->state_machine;
     uint8_t pio_index = pio_get_index(self->pio);
     common_hal_mcu_disable_interrupts();
@@ -654,7 +672,7 @@ static bool _transfer(rp2pio_statemachine_obj_t *self,
                (tx && dma_channel_is_busy(chan_tx))) {
             // TODO: We should idle here until we get a DMA interrupt or something else.
             RUN_BACKGROUND_TASKS;
-            if (mp_hal_is_interrupted()) {
+            if (self->user_interruptible && mp_hal_is_interrupted()) {
                 if (rx && dma_channel_is_busy(chan_rx)) {
                     dma_channel_abort(chan_rx);
                 }
@@ -663,6 +681,7 @@ static bool _transfer(rp2pio_statemachine_obj_t *self,
                 }
                 break;
             }
+
         }
         // Clear the stall bit so we can detect when the state machine is done transmitting.
         self->pio->fdebug = stall_mask;
@@ -677,7 +696,7 @@ static bool _transfer(rp2pio_statemachine_obj_t *self,
         dma_channel_unclaim(chan_tx);
     }
 
-    if (!use_dma && !mp_hal_is_interrupted()) {
+    if (!use_dma && !(self->user_interruptible && mp_hal_is_interrupted())) {
         // Use software for small transfers, or if couldn't claim two DMA channels
         size_t rx_remaining = in_len / in_stride_in_bytes;
         size_t tx_remaining = out_len / out_stride_in_bytes;
@@ -706,7 +725,7 @@ static bool _transfer(rp2pio_statemachine_obj_t *self,
                 --rx_remaining;
             }
             RUN_BACKGROUND_TASKS;
-            if (mp_hal_is_interrupted()) {
+            if (self->user_interruptible && mp_hal_is_interrupted()) {
                 break;
             }
         }
@@ -719,7 +738,7 @@ static bool _transfer(rp2pio_statemachine_obj_t *self,
         while (!pio_sm_is_tx_fifo_empty(self->pio, self->state_machine) ||
                (self->wait_for_txstall && (self->pio->fdebug & stall_mask) == 0)) {
             RUN_BACKGROUND_TASKS;
-            if (mp_hal_is_interrupted()) {
+            if (self->user_interruptible && mp_hal_is_interrupted()) {
                 break;
             }
         }

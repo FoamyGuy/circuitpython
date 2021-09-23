@@ -242,7 +242,7 @@ jobs:
         zip -9r circuitpython-stubs.zip circuitpython-stubs
         [ -z "$AWS_ACCESS_KEY_ID" ] || aws s3 cp circuitpython-stubs/dist/*.tar.gz s3://adafruit-circuit-python/bin/stubs/circuitpython-stubs-${{ env.CP_VERSION }}.zip --no-progress --region us-east-1
     - name: Upload stubs to PyPi
-      if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository_owner == 'adafruit'
+      if: (github.event_name == 'push' && github.ref == 'refs/heads/foamyguy_test_stubs' && github.repository_owner == 'foamyguy' || (github.event_name == 'release') && (github.event.action == 'published' || github.event.action == 'rerequested'))
       env:
         TWINE_USERNAME: ${{ secrets.pypi_username }}
         TWINE_PASSWORD: ${{ secrets.pypi_password }}
@@ -252,193 +252,193 @@ jobs:
         [ -z "$TWINE_USERNAME" ] || twine upload circuitpython-stubs/dist/*
 
 
-  build-arm:
-    runs-on: ubuntu-20.04
-    needs: test
-    strategy:
-      fail-fast: false
-      matrix:
-        board: ${{ fromJSON(needs.test.outputs.boards-arm) }}
-    if: ${{ needs.test.outputs.boards-arm != '[]' }}
-    steps:
-    - name: Set up Python 3.8
-      uses: actions/setup-python@v1
-      with:
-        python-version: 3.8
-    - uses: actions/checkout@v2.2.0
-      with:
-        submodules: true
-        fetch-depth: 0
-    - name: Fetch tags
-      run: git fetch --recurse-submodules=no https://github.com/adafruit/circuitpython refs/tags/*:refs/tags/*
-    - name: Install dependencies
-      run: |
-        sudo apt-get install -y gettext
-        pip install -r requirements-ci.txt -r requirements-dev.txt
-        wget --no-verbose https://adafruit-circuit-python.s3.amazonaws.com/gcc-arm-none-eabi-10-2020-q4-major-x86_64-linux.tar.bz2
-        sudo tar -C /usr --strip-components=1 -xaf gcc-arm-none-eabi-10-2020-q4-major-x86_64-linux.tar.bz2
-    - name: Versions
-      run: |
-        gcc --version
-        arm-none-eabi-gcc --version
-        python3 --version
-    - name: mpy-cross
-      run: make -C mpy-cross -j2
-    - name: Setup build failure matcher
-      run: echo "::add-matcher::$GITHUB_WORKSPACE/.github/workflows/match-build-fail.json"
-    - name: build
-      run: python3 -u build_release_files.py
-      working-directory: tools
-      env:
-        BOARDS: ${{ matrix.board }}
-    - uses: actions/upload-artifact@v2
-      with:
-        name: ${{ matrix.board }}
-        path: bin/${{ matrix.board }}
-    - name: Upload to S3
-      run: "[ -z \"$AWS_ACCESS_KEY_ID\" ] || aws s3 cp bin/ s3://adafruit-circuit-python/bin/ --recursive --no-progress --region us-east-1"
-      env:
-        AWS_PAGER: ''
-        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-      if: (github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository_owner == 'adafruit') || (github.event_name == 'release' && (github.event.action == 'published' || github.event.action == 'rerequested'))
-
-
-  build-riscv:
-    runs-on: ubuntu-20.04
-    needs: test
-    strategy:
-      fail-fast: false
-      matrix:
-        board: ${{ fromJSON(needs.test.outputs.boards-riscv) }}
-    if: ${{ needs.test.outputs.boards-riscv != '[]' }}
-    steps:
-    - name: Set up Python 3.8
-      uses: actions/setup-python@v1
-      with:
-        python-version: 3.8
-    - uses: actions/checkout@v2.2.0
-      with:
-        submodules: true
-        fetch-depth: 0
-    - name: Fetch tags
-      run: git fetch --recurse-submodules=no https://github.com/adafruit/circuitpython refs/tags/*:refs/tags/*
-    - name: Install dependencies
-      run: |
-        sudo apt-get install -y gettext
-        pip install -r requirements-ci.txt -r requirements-dev.txt
-        wget https://static.dev.sifive.com/dev-tools/riscv64-unknown-elf-gcc-8.3.0-2019.08.0-x86_64-linux-centos6.tar.gz
-        sudo tar -C /usr --strip-components=1 -xaf riscv64-unknown-elf-gcc-8.3.0-2019.08.0-x86_64-linux-centos6.tar.gz
-    - name: Versions
-      run: |
-        gcc --version
-        riscv64-unknown-elf-gcc --version
-        python3 --version
-    - name: mpy-cross
-      run: make -C mpy-cross -j2
-    - name: Setup build failure matcher
-      run: echo "::add-matcher::$GITHUB_WORKSPACE/.github/workflows/match-build-fail.json"
-    - name: build
-      run: python3 -u build_release_files.py
-      working-directory: tools
-      env:
-        BOARDS: ${{ matrix.board }}
-    - uses: actions/upload-artifact@v2
-      with:
-        name: ${{ matrix.board }}
-        path: bin/${{ matrix.board }}
-    - name: Upload to S3
-      run: "[ -z \"$AWS_ACCESS_KEY_ID\" ] || aws s3 cp bin/ s3://adafruit-circuit-python/bin/ --recursive --no-progress --region us-east-1"
-      env:
-        AWS_PAGER: ''
-        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-      if: (github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository_owner == 'adafruit') || (github.event_name == 'release' && (github.event.action == 'published' || github.event.action == 'rerequested'))
-
-
-  build-espressif:
-    runs-on: ubuntu-20.04
-    needs: test
-    strategy:
-      fail-fast: false
-      matrix:
-        board: ${{ fromJSON(needs.test.outputs.boards-espressif) }}
-    if: ${{ needs.test.outputs.boards-espressif != '[]' }}
-    steps:
-    - name: Set up Python 3.8
-      uses: actions/setup-python@v1
-      with:
-        python-version: 3.8
-    - uses: actions/checkout@v2.2.0
-      with:
-        submodules: true
-        fetch-depth: 0
-    - name: Fetch tags
-      run: git fetch --recurse-submodules=no https://github.com/adafruit/circuitpython refs/tags/*:refs/tags/*
-    - name: CircuitPython version
-      run: git describe --dirty --tags
-    - uses: actions/cache@v2
-      name: Fetch IDF tool cache
-      id: idf-cache
-      with:
-        path: ${{ github.workspace }}/.idf_tools
-        key: ${{ runner.os }}-idf-tools-${{ hashFiles('.git/modules/ports/espressif/esp-idf/HEAD') }}-20210716
-    - name: Clone IDF submodules
-      run: |
-        (cd $IDF_PATH && git submodule update --init)
-      env:
-        IDF_PATH: ${{ github.workspace }}/ports/espressif/esp-idf
-    - name: Install IDF tools
-      run: |
-        $IDF_PATH/tools/idf_tools.py --non-interactive install required
-        $IDF_PATH/tools/idf_tools.py --non-interactive install cmake
-        $IDF_PATH/tools/idf_tools.py --non-interactive install-python-env
-        rm -rf $IDF_TOOLS_PATH/dist
-      env:
-        IDF_PATH: ${{ github.workspace }}/ports/espressif/esp-idf
-        IDF_TOOLS_PATH: ${{ github.workspace }}/.idf_tools
-    - name: Install dependencies
-      run: |
-        source $IDF_PATH/export.sh
-        sudo apt-get install -y gettext ninja-build
-        pip install -r requirements-ci.txt -r requirements-dev.txt
-      env:
-        IDF_PATH: ${{ github.workspace }}/ports/espressif/esp-idf
-        IDF_TOOLS_PATH: ${{ github.workspace }}/.idf_tools
-    - name: Versions
-      run: |
-        source $IDF_PATH/export.sh
-        gcc --version
-        xtensa-esp32s2-elf-gcc --version
-        python3 --version
-        ninja --version
-        cmake --version
-      shell: bash
-      env:
-        IDF_PATH: ${{ github.workspace }}/ports/espressif/esp-idf
-        IDF_TOOLS_PATH: ${{ github.workspace }}/.idf_tools
-    - name: mpy-cross
-      run: make -C mpy-cross -j2
-    - name: Setup build failure matcher
-      run: echo "::add-matcher::$GITHUB_WORKSPACE/.github/workflows/match-build-fail.json"
-    - name: build
-      run: |
-        source $IDF_PATH/export.sh
-        python3 -u build_release_files.py
-      working-directory: tools
-      shell: bash
-      env:
-        IDF_PATH: ${{ github.workspace }}/ports/espressif/esp-idf
-        IDF_TOOLS_PATH: ${{ github.workspace }}/.idf_tools
-        BOARDS: ${{ matrix.board }}
-    - uses: actions/upload-artifact@v2
-      with:
-        name: ${{ matrix.board }}
-        path: bin/${{ matrix.board }}
-    - name: Upload to S3
-      run: "[ -z \"$AWS_ACCESS_KEY_ID\" ] || aws s3 cp bin/ s3://adafruit-circuit-python/bin/ --recursive --no-progress --region us-east-1"
-      env:
-        AWS_PAGER: ''
-        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-      if: (github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository_owner == 'adafruit') || (github.event_name == 'release' && (github.event.action == 'published' || github.event.action == 'rerequested'))
+#  build-arm:
+#    runs-on: ubuntu-20.04
+#    needs: test
+#    strategy:
+#      fail-fast: false
+#      matrix:
+#        board: ${{ fromJSON(needs.test.outputs.boards-arm) }}
+#    if: ${{ needs.test.outputs.boards-arm != '[]' }}
+#    steps:
+#    - name: Set up Python 3.8
+#      uses: actions/setup-python@v1
+#      with:
+#        python-version: 3.8
+#    - uses: actions/checkout@v2.2.0
+#      with:
+#        submodules: true
+#        fetch-depth: 0
+#    - name: Fetch tags
+#      run: git fetch --recurse-submodules=no https://github.com/adafruit/circuitpython refs/tags/*:refs/tags/*
+#    - name: Install dependencies
+#      run: |
+#        sudo apt-get install -y gettext
+#        pip install -r requirements-ci.txt -r requirements-dev.txt
+#        wget --no-verbose https://adafruit-circuit-python.s3.amazonaws.com/gcc-arm-none-eabi-10-2020-q4-major-x86_64-linux.tar.bz2
+#        sudo tar -C /usr --strip-components=1 -xaf gcc-arm-none-eabi-10-2020-q4-major-x86_64-linux.tar.bz2
+#    - name: Versions
+#      run: |
+#        gcc --version
+#        arm-none-eabi-gcc --version
+#        python3 --version
+#    - name: mpy-cross
+#      run: make -C mpy-cross -j2
+#    - name: Setup build failure matcher
+#      run: echo "::add-matcher::$GITHUB_WORKSPACE/.github/workflows/match-build-fail.json"
+#    - name: build
+#      run: python3 -u build_release_files.py
+#      working-directory: tools
+#      env:
+#        BOARDS: ${{ matrix.board }}
+#    - uses: actions/upload-artifact@v2
+#      with:
+#        name: ${{ matrix.board }}
+#        path: bin/${{ matrix.board }}
+#    - name: Upload to S3
+#      run: "[ -z \"$AWS_ACCESS_KEY_ID\" ] || aws s3 cp bin/ s3://adafruit-circuit-python/bin/ --recursive --no-progress --region us-east-1"
+#      env:
+#        AWS_PAGER: ''
+#        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+#        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+#      if: (github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository_owner == 'adafruit') || (github.event_name == 'release' && (github.event.action == 'published' || github.event.action == 'rerequested'))
+#
+#
+#  build-riscv:
+#    runs-on: ubuntu-20.04
+#    needs: test
+#    strategy:
+#      fail-fast: false
+#      matrix:
+#        board: ${{ fromJSON(needs.test.outputs.boards-riscv) }}
+#    if: ${{ needs.test.outputs.boards-riscv != '[]' }}
+#    steps:
+#    - name: Set up Python 3.8
+#      uses: actions/setup-python@v1
+#      with:
+#        python-version: 3.8
+#    - uses: actions/checkout@v2.2.0
+#      with:
+#        submodules: true
+#        fetch-depth: 0
+#    - name: Fetch tags
+#      run: git fetch --recurse-submodules=no https://github.com/adafruit/circuitpython refs/tags/*:refs/tags/*
+#    - name: Install dependencies
+#      run: |
+#        sudo apt-get install -y gettext
+#        pip install -r requirements-ci.txt -r requirements-dev.txt
+#        wget https://static.dev.sifive.com/dev-tools/riscv64-unknown-elf-gcc-8.3.0-2019.08.0-x86_64-linux-centos6.tar.gz
+#        sudo tar -C /usr --strip-components=1 -xaf riscv64-unknown-elf-gcc-8.3.0-2019.08.0-x86_64-linux-centos6.tar.gz
+#    - name: Versions
+#      run: |
+#        gcc --version
+#        riscv64-unknown-elf-gcc --version
+#        python3 --version
+#    - name: mpy-cross
+#      run: make -C mpy-cross -j2
+#    - name: Setup build failure matcher
+#      run: echo "::add-matcher::$GITHUB_WORKSPACE/.github/workflows/match-build-fail.json"
+#    - name: build
+#      run: python3 -u build_release_files.py
+#      working-directory: tools
+#      env:
+#        BOARDS: ${{ matrix.board }}
+#    - uses: actions/upload-artifact@v2
+#      with:
+#        name: ${{ matrix.board }}
+#        path: bin/${{ matrix.board }}
+#    - name: Upload to S3
+#      run: "[ -z \"$AWS_ACCESS_KEY_ID\" ] || aws s3 cp bin/ s3://adafruit-circuit-python/bin/ --recursive --no-progress --region us-east-1"
+#      env:
+#        AWS_PAGER: ''
+#        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+#        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+#      if: (github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository_owner == 'adafruit') || (github.event_name == 'release' && (github.event.action == 'published' || github.event.action == 'rerequested'))
+#
+#
+#  build-espressif:
+#    runs-on: ubuntu-20.04
+#    needs: test
+#    strategy:
+#      fail-fast: false
+#      matrix:
+#        board: ${{ fromJSON(needs.test.outputs.boards-espressif) }}
+#    if: ${{ needs.test.outputs.boards-espressif != '[]' }}
+#    steps:
+#    - name: Set up Python 3.8
+#      uses: actions/setup-python@v1
+#      with:
+#        python-version: 3.8
+#    - uses: actions/checkout@v2.2.0
+#      with:
+#        submodules: true
+#        fetch-depth: 0
+#    - name: Fetch tags
+#      run: git fetch --recurse-submodules=no https://github.com/adafruit/circuitpython refs/tags/*:refs/tags/*
+#    - name: CircuitPython version
+#      run: git describe --dirty --tags
+#    - uses: actions/cache@v2
+#      name: Fetch IDF tool cache
+#      id: idf-cache
+#      with:
+#        path: ${{ github.workspace }}/.idf_tools
+#        key: ${{ runner.os }}-idf-tools-${{ hashFiles('.git/modules/ports/espressif/esp-idf/HEAD') }}-20210716
+#    - name: Clone IDF submodules
+#      run: |
+#        (cd $IDF_PATH && git submodule update --init)
+#      env:
+#        IDF_PATH: ${{ github.workspace }}/ports/espressif/esp-idf
+#    - name: Install IDF tools
+#      run: |
+#        $IDF_PATH/tools/idf_tools.py --non-interactive install required
+#        $IDF_PATH/tools/idf_tools.py --non-interactive install cmake
+#        $IDF_PATH/tools/idf_tools.py --non-interactive install-python-env
+#        rm -rf $IDF_TOOLS_PATH/dist
+#      env:
+#        IDF_PATH: ${{ github.workspace }}/ports/espressif/esp-idf
+#        IDF_TOOLS_PATH: ${{ github.workspace }}/.idf_tools
+#    - name: Install dependencies
+#      run: |
+#        source $IDF_PATH/export.sh
+#        sudo apt-get install -y gettext ninja-build
+#        pip install -r requirements-ci.txt -r requirements-dev.txt
+#      env:
+#        IDF_PATH: ${{ github.workspace }}/ports/espressif/esp-idf
+#        IDF_TOOLS_PATH: ${{ github.workspace }}/.idf_tools
+#    - name: Versions
+#      run: |
+#        source $IDF_PATH/export.sh
+#        gcc --version
+#        xtensa-esp32s2-elf-gcc --version
+#        python3 --version
+#        ninja --version
+#        cmake --version
+#      shell: bash
+#      env:
+#        IDF_PATH: ${{ github.workspace }}/ports/espressif/esp-idf
+#        IDF_TOOLS_PATH: ${{ github.workspace }}/.idf_tools
+#    - name: mpy-cross
+#      run: make -C mpy-cross -j2
+#    - name: Setup build failure matcher
+#      run: echo "::add-matcher::$GITHUB_WORKSPACE/.github/workflows/match-build-fail.json"
+#    - name: build
+#      run: |
+#        source $IDF_PATH/export.sh
+#        python3 -u build_release_files.py
+#      working-directory: tools
+#      shell: bash
+#      env:
+#        IDF_PATH: ${{ github.workspace }}/ports/espressif/esp-idf
+#        IDF_TOOLS_PATH: ${{ github.workspace }}/.idf_tools
+#        BOARDS: ${{ matrix.board }}
+#    - uses: actions/upload-artifact@v2
+#      with:
+#        name: ${{ matrix.board }}
+#        path: bin/${{ matrix.board }}
+#    - name: Upload to S3
+#      run: "[ -z \"$AWS_ACCESS_KEY_ID\" ] || aws s3 cp bin/ s3://adafruit-circuit-python/bin/ --recursive --no-progress --region us-east-1"
+#      env:
+#        AWS_PAGER: ''
+#        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+#        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+#      if: (github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository_owner == 'adafruit') || (github.event_name == 'release' && (github.event.action == 'published' || github.event.action == 'rerequested'))

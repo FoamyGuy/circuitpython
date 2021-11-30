@@ -99,42 +99,56 @@ STATIC mp_obj_t nvm_bytearray_subscr(mp_obj_t self_in, mp_obj_t index_in, mp_obj
         if (0) {
         #if MICROPY_PY_BUILTINS_SLICE
         } else if (mp_obj_is_type(index_in, &mp_type_slice)) {
+            mp_printf(&mp_plat_print, "\ninside slice 102");
             mp_bound_slice_t slice;
             if (!mp_seq_get_fast_slice_indexes(common_hal_nvm_bytearray_get_length(self), index_in, &slice)) {
                 mp_raise_NotImplementedError(translate("only slices with step=1 (aka None) are supported"));
             }
+            mp_printf(&mp_plat_print, "\nBefore If 106\n");
             if (value != MP_OBJ_SENTINEL) {
                 #if MICROPY_PY_ARRAY_SLICE_ASSIGN
                 // Assign
+                mp_printf(&mp_plat_print, "\nassign slice 111\n");
                 size_t src_len = slice.stop - slice.start;
                 uint8_t *src_items;
+                mp_printf(&mp_plat_print, "\nafter len and src_items 114\n");
                 if (mp_obj_is_type(value, &mp_type_array) ||
                     mp_obj_is_type(value, &mp_type_bytearray) ||
                     mp_obj_is_type(value, &mp_type_memoryview) ||
                     mp_obj_is_type(value, &mp_type_bytes)) {
+                    mp_printf(&mp_plat_print, "\ninside type if 119\n");
                     mp_buffer_info_t bufinfo;
+                    mp_printf(&mp_plat_print, "\nafter make bufinfo 121\n");
                     mp_get_buffer_raise(value, &bufinfo, MP_BUFFER_READ);
+                    mp_printf(&mp_plat_print, "\nafter getbuffer 123\n");
                     if (bufinfo.len != src_len) {
                         mp_raise_ValueError(translate("Slice and value different lengths."));
                     }
+                    mp_printf(&mp_plat_print, "\nafter length check 127\n");
                     src_len = bufinfo.len;
+                    mp_printf(&mp_plat_print, "\nafter set src_len 129\n");
                     src_items = bufinfo.buf;
+                    mp_printf(&mp_plat_print, "\nafter set src_items 131\n");
                     if (1 != mp_binary_get_size('@', bufinfo.typecode, NULL)) {
                         mp_raise_ValueError(translate("Array values should be single bytes."));
                     }
+                    mp_printf(&mp_plat_print, "\nafter check binary_get_size 135\n");
                 } else {
                     mp_raise_NotImplementedError(translate("array/bytes required on right side"));
                 }
+                mp_printf(&mp_plat_print, "\nafter big if 139\n");
 
                 if (!common_hal_nvm_bytearray_set_bytes(self, slice.start, src_items, src_len)) {
                     mp_raise_RuntimeError(translate("Unable to write to nvm."));
                 }
+                mp_printf(&mp_plat_print, "\nafter unable to write check 144\n");
                 return mp_const_none;
                 #else
                 return MP_OBJ_NULL; // op not supported
                 #endif
             } else {
                 // Read slice.
+                mp_printf(&mp_plat_print, "\nread slice 140\n");
                 size_t len = slice.stop - slice.start;
                 uint8_t *items = m_new(uint8_t, len);
                 common_hal_nvm_bytearray_get_bytes(self, slice.start, len, items);

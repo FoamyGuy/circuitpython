@@ -102,7 +102,7 @@ STATIC mp_obj_t nvm_bytearray_subscr(mp_obj_t self_in, mp_obj_t index_in, mp_obj
         #if MICROPY_PY_BUILTINS_SLICE
         } else if (mp_obj_is_type(index_in, &mp_type_slice)) {
             mp_printf(&mp_plat_print, "\ninside slice 102");
-            common_hal_mcu_disable_interrupts();
+            //common_hal_mcu_disable_interrupts();
             mp_printf(&mp_plat_print, "\nafter disable 104");
             mp_bound_slice_t slice;
             if (!mp_seq_get_fast_slice_indexes(common_hal_nvm_bytearray_get_length(self), index_in, &slice)) {
@@ -148,7 +148,7 @@ STATIC mp_obj_t nvm_bytearray_subscr(mp_obj_t self_in, mp_obj_t index_in, mp_obj
                     mp_raise_RuntimeError(translate("Unable to write to nvm."));
                 }
                 mp_printf(&mp_plat_print, "\nafter unable to write check 144\n");
-                common_hal_mcu_enable_interrupts();
+                //common_hal_mcu_enable_interrupts();
                 return mp_const_none;
                 #else
                 return MP_OBJ_NULL; // op not supported
@@ -159,7 +159,7 @@ STATIC mp_obj_t nvm_bytearray_subscr(mp_obj_t self_in, mp_obj_t index_in, mp_obj
                 size_t len = slice.stop - slice.start;
                 uint8_t *items = m_new(uint8_t, len);
                 common_hal_nvm_bytearray_get_bytes(self, slice.start, len, items);
-                common_hal_mcu_enable_interrupts();
+                //common_hal_mcu_enable_interrupts();
                 return mp_obj_new_bytearray_by_ref(len, items);
             }
 

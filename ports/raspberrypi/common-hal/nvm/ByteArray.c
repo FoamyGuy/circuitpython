@@ -31,6 +31,7 @@
 
 #include "py/runtime.h"
 #include "src/rp2_common/hardware_flash/include/hardware/flash.h"
+#include "shared-bindings/microcontroller/__init__.h"
 
 extern uint32_t __flash_binary_start;
 static const uint32_t flash_binary_start = (uint32_t)&__flash_binary_start;
@@ -71,8 +72,13 @@ void common_hal_nvm_bytearray_get_bytes(const nvm_bytearray_obj_t *self,
 
 bool common_hal_nvm_bytearray_set_bytes(const nvm_bytearray_obj_t *self,
     uint32_t start_index, uint8_t *values, uint32_t len) {
+
+    common_hal_mcu_disable_interrupts();
+
+    mp_printf(&mp_plat_print, "\nports inside common_hal_nvm_bytearray_set_bytes 74\n");
     uint8_t values_in[len];
     common_hal_nvm_bytearray_get_bytes(self, start_index, len, values_in);
+    mp_printf(&mp_plat_print, "\nports after get_bytes 77\n");
 
     bool all_ones = true;
     for (uint32_t i = 0; i < len; i++) {
@@ -81,23 +87,34 @@ bool common_hal_nvm_bytearray_set_bytes(const nvm_bytearray_obj_t *self,
             break;
         }
     }
+    mp_printf(&mp_plat_print, "\nports fter check all ones 86\n");
 
     if (all_ones) {
+        mp_printf(&mp_plat_print, "\nports inside all ones if 89\n");
         uint32_t address = (uint32_t)self->start_address + start_index;
         uint32_t offset = address % FLASH_PAGE_SIZE;
         uint32_t page_addr = address - offset;
+        mp_printf(&mp_plat_print, "\nports after make vars 93\n");
 
         while (len) {
+            mp_printf(&mp_plat_print, "\nports inside while len 96\n");
             uint32_t write_len = MIN(len, FLASH_PAGE_SIZE - offset);
+            mp_printf(&mp_plat_print, "\nports before write page 98\n");
             write_page(page_addr, offset, write_len, values);
+            mp_printf(&mp_plat_print, "\nports after write page 100\n");
             len -= write_len;
             values += write_len;
             page_addr += FLASH_PAGE_SIZE;
             offset = 0;
+            mp_printf(&mp_plat_print, "\nports after update vars 105\n");
         }
     } else {
+        mp_printf(&mp_plat_print, "\nports before erase write sector 108\n");
         erase_and_write_sector(start_index, len, values);
+        mp_printf(&mp_plat_print, "\nports after erase write sector 110\n");
     }
+
+    common_hal_mcu_enable_interrupts();
 
     return true;
 }

@@ -95,11 +95,15 @@ STATIC mp_obj_t nvm_bytearray_subscr(mp_obj_t self_in, mp_obj_t index_in, mp_obj
         // slice deletion
         return MP_OBJ_NULL; // op not supported
     } else {
+        mp_printf(&mp_plat_print, "\ninside else 98");
         nvm_bytearray_obj_t *self = MP_OBJ_TO_PTR(self_in);
+        mp_printf(&mp_plat_print, "\nafter obj_to_ptr 100");
         if (0) {
         #if MICROPY_PY_BUILTINS_SLICE
         } else if (mp_obj_is_type(index_in, &mp_type_slice)) {
             mp_printf(&mp_plat_print, "\ninside slice 102");
+            common_hal_mcu_disable_interrupts();
+            mp_printf(&mp_plat_print, "\nafter disable 104");
             mp_bound_slice_t slice;
             if (!mp_seq_get_fast_slice_indexes(common_hal_nvm_bytearray_get_length(self), index_in, &slice)) {
                 mp_raise_NotImplementedError(translate("only slices with step=1 (aka None) are supported"));
@@ -107,11 +111,13 @@ STATIC mp_obj_t nvm_bytearray_subscr(mp_obj_t self_in, mp_obj_t index_in, mp_obj
             mp_printf(&mp_plat_print, "\nBefore If 106\n");
             if (value != MP_OBJ_SENTINEL) {
                 #if MICROPY_PY_ARRAY_SLICE_ASSIGN
+
                 // Assign
                 mp_printf(&mp_plat_print, "\nassign slice 111\n");
                 size_t src_len = slice.stop - slice.start;
                 uint8_t *src_items;
                 mp_printf(&mp_plat_print, "\nafter len and src_items 114\n");
+
                 if (mp_obj_is_type(value, &mp_type_array) ||
                     mp_obj_is_type(value, &mp_type_bytearray) ||
                     mp_obj_is_type(value, &mp_type_memoryview) ||
@@ -142,6 +148,7 @@ STATIC mp_obj_t nvm_bytearray_subscr(mp_obj_t self_in, mp_obj_t index_in, mp_obj
                     mp_raise_RuntimeError(translate("Unable to write to nvm."));
                 }
                 mp_printf(&mp_plat_print, "\nafter unable to write check 144\n");
+                common_hal_mcu_enable_interrupts();
                 return mp_const_none;
                 #else
                 return MP_OBJ_NULL; // op not supported
@@ -152,13 +159,17 @@ STATIC mp_obj_t nvm_bytearray_subscr(mp_obj_t self_in, mp_obj_t index_in, mp_obj
                 size_t len = slice.stop - slice.start;
                 uint8_t *items = m_new(uint8_t, len);
                 common_hal_nvm_bytearray_get_bytes(self, slice.start, len, items);
+                common_hal_mcu_enable_interrupts();
                 return mp_obj_new_bytearray_by_ref(len, items);
             }
+
         #endif
         } else {
             // Single index rather than slice.
+            mp_printf(&mp_plat_print, "\nread single 169\n");
             size_t index = mp_get_index(self->base.type, common_hal_nvm_bytearray_get_length(self),
                 index_in, false);
+            mp_printf(&mp_plat_print, "\nafter index 172\n");
             if (value == MP_OBJ_SENTINEL) {
                 // load
                 uint8_t value_out;

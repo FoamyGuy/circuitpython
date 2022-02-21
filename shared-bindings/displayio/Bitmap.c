@@ -122,6 +122,24 @@ const mp_obj_property_t displayio_bitmap_height_obj = {
               MP_ROM_NONE},
 };
 
+//|     color_depth: int
+//|     """Color depth of the bitmap. (read only)"""
+//|
+STATIC mp_obj_t displayio_bitmap_obj_get_color_depth(mp_obj_t self_in) {
+    displayio_bitmap_t *self = MP_OBJ_TO_PTR(self_in);
+
+    return MP_OBJ_NEW_SMALL_INT(common_hal_displayio_bitmap_get_bits_per_value(self));
+}
+
+MP_DEFINE_CONST_FUN_OBJ_1(displayio_bitmap_get_color_depth_obj, displayio_bitmap_obj_get_color_depth);
+
+const mp_obj_property_t displayio_bitmap_color_depth_obj = {
+    .base.type = &mp_type_property,
+    .proxy = {(mp_obj_t)&displayio_bitmap_get_color_depth_obj,
+              MP_ROM_NONE,
+              MP_ROM_NONE},
+};
+
 //|     def __getitem__(self, index: Union[Tuple[int, int], int]) -> int:
 //|         """Returns the value at the given index. The index can either be an x,y tuple or an int equal
 //|         to ``y * width + x``.
@@ -352,6 +370,7 @@ MP_DEFINE_CONST_FUN_OBJ_KW(displayio_bitmap_dirty_obj, 0, displayio_bitmap_obj_d
 STATIC const mp_rom_map_elem_t displayio_bitmap_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_height), MP_ROM_PTR(&displayio_bitmap_height_obj) },
     { MP_ROM_QSTR(MP_QSTR_width), MP_ROM_PTR(&displayio_bitmap_width_obj) },
+    { MP_ROM_QSTR(MP_QSTR_color_depth), MP_ROM_PTR(&displayio_bitmap_color_depth_obj) },
     { MP_ROM_QSTR(MP_QSTR_blit), MP_ROM_PTR(&displayio_bitmap_blit_obj) },
     { MP_ROM_QSTR(MP_QSTR_fill), MP_ROM_PTR(&displayio_bitmap_fill_obj) },
     { MP_ROM_QSTR(MP_QSTR_dirty), MP_ROM_PTR(&displayio_bitmap_dirty_obj) },

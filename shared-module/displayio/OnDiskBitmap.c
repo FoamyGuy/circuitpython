@@ -29,6 +29,7 @@
 #include "shared-bindings/displayio/Palette.h"
 #include "shared-module/displayio/ColorConverter.h"
 #include "shared-module/displayio/Palette.h"
+#include "supervisor/usb.h"
 
 #include <string.h>
 
@@ -150,6 +151,10 @@ uint32_t common_hal_displayio_ondiskbitmap_get_pixel(displayio_ondiskbitmap_t *s
     if (x < 0 || x >= self->width || y < 0 || y >= self->height) {
         return 0;
     }
+
+    #if CIRCUITPY_USB
+        usb_background();
+    #endif
 
     uint32_t location;
     uint8_t bytes_per_pixel = (self->bits_per_pixel / 8)  ? (self->bits_per_pixel / 8) : 1;

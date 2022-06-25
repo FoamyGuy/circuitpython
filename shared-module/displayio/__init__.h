@@ -47,6 +47,9 @@
 #if CIRCUITPY_SHARPDISPLAY
 #include "shared-module/sharpdisplay/SharpMemoryFramebuffer.h"
 #endif
+#if CIRCUITPY_DOTCLOCKDISPLAY
+#include "shared-module/dotclockdisplay/DotClockFramebuffer.h"
+#endif
 #if CIRCUITPY_VIDEOCORE
 #include "bindings/videocore/Framebuffer.h"
 #endif
@@ -67,6 +70,9 @@ typedef struct {
         #endif
         #if CIRCUITPY_SHARPDISPLAY
         sharpdisplay_framebuffer_obj_t sharpdisplay;
+        #endif
+        #if CIRCUITPY_DOTCLOCKDISPLAY
+        dotclockdisplay_framebuffer_obj_t dotclockdisplay;
         #endif
         #if CIRCUITPY_VIDEOCORE
         videocore_framebuffer_obj_t videocore;

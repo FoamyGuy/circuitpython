@@ -297,6 +297,9 @@ endif
 ifeq ($(CIRCUITPY_SHARPDISPLAY),1)
 SRC_PATTERNS += sharpdisplay/%
 endif
+ifeq ($(CIRCUITPY_DOTCLOCKDISPLAY),1)
+SRC_PATTERNS += dotclockdisplay/%
+endif
 ifeq ($(CIRCUITPY_SOCKETPOOL),1)
 SRC_PATTERNS += socketpool/%
 endif
@@ -608,6 +611,8 @@ SRC_SHARED_MODULE_ALL = \
 	sdcardio/__init__.c \
 	sharpdisplay/SharpMemoryFramebuffer.c \
 	sharpdisplay/__init__.c \
+	dotclockdisplay/DotClockFramebuffer.c \
+	dotclockdisplay/__init__.c \
 	socket/__init__.c \
 	storage/__init__.c \
 	struct/__init__.c \

@@ -182,6 +182,7 @@ LDFLAGS += \
 	-L$(BUILD)/esp-idf/esp-idf/esp_system/ld \
 	-Lesp-idf/components/esp_rom/$(IDF_TARGET)/ld \
 	-Lesp-idf/components/soc/$(IDF_TARGET)/ld \
+	-Lesp-idf/components/esp_lcd/$(IDF_TARGET)/ld \
 	-Tmemory.ld \
 	-Tsections.ld \
 	-T$(IDF_TARGET).peripherals.ld \
@@ -370,7 +371,7 @@ ifeq ($(IDF_TARGET),esp32)
 BINARY_BLOBS += esp-idf/components/esp_phy/lib/$(IDF_TARGET)/librtc.a
 endif
 
-ESP_IDF_COMPONENTS_LINK = $(IDF_TARGET_ARCH) app_update bootloader_support driver efuse esp_adc_cal esp_common esp_event esp_hw_support esp_ipc esp_netif esp_pm esp_phy esp_ringbuf esp_rom esp_system esp_timer esp-tls esp_wifi freertos hal heap log lwip mbedtls mdns newlib nvs_flash pthread soc spi_flash vfs wpa_supplicant
+ESP_IDF_COMPONENTS_LINK = $(IDF_TARGET_ARCH) app_update bootloader_support driver efuse esp_adc_cal esp_common esp_event esp_hw_support esp_ipc esp_netif esp_pm esp_phy esp_ringbuf esp_rom esp_system esp_timer esp-tls esp_wifi freertos hal heap log lwip mbedtls mdns newlib nvs_flash pthread soc spi_flash vfs wpa_supplicant esp_lcd
 ifneq ($(CIRCUITPY_BLEIO),0)
 	ESP_IDF_COMPONENTS_LINK += bt
 	BINARY_BLOBS += esp-idf/components/esp_phy/lib/$(IDF_TARGET)/libbtbb.a \

@@ -954,10 +954,6 @@ msgstr ""
 msgid "Failed to connect: timeout"
 msgstr ""
 
-#: ports/espressif/common-hal/wifi/__init__.c
-msgid "Failed to init wifi"
-msgstr ""
-
 #: shared-module/audiomp3/MP3Decoder.c
 msgid "Failed to parse MP3 file"
 msgstr ""
@@ -1888,6 +1884,10 @@ msgstr ""
 
 #: shared-bindings/aesio/aes.c
 msgid "Source and destination buffers must be the same length"
+msgstr ""
+
+#: shared-bindings/dotclockdisplay/DotClockFramebuffer.c
+msgid "Specify exactly 16 data_pins."
 msgstr ""
 
 #: shared-bindings/paralleldisplay/ParallelBus.c

@@ -46,6 +46,11 @@
 #include "shared-module/sharpdisplay/SharpMemoryFramebuffer.h"
 #endif
 
+#if CIRCUITPY_DOTCLOCKDISPLAY
+#include "shared-bindings/dotclockdisplay/DotClockFramebuffer.h"
+#include "shared-module/dotclockdisplay/DotClockFramebuffer.h"
+#endif
+
 #if CIRCUITPY_BOARD_I2C
 // Statically allocate the I2C object so it can live past the end of the heap and into the next VM.
 // That way it can be used by built-in I2CDisplay displays and be accessible through board.I2C().

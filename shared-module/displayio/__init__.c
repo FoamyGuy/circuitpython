@@ -47,6 +47,10 @@
 #include "shared-bindings/sharpdisplay/SharpMemoryFramebuffer.h"
 #include "shared-module/sharpdisplay/SharpMemoryFramebuffer.h"
 #endif
+#if CIRCUITPY_DOTCLOCKDISPLAY
+#include "shared-bindings/dotclockdisplay/DotClockFramebuffer.h"
+#include "shared-module/dotclockdisplay/DotClockFramebuffer.h"
+#endif
 
 primary_display_t displays[CIRCUITPY_DISPLAY_LIMIT];
 
@@ -147,6 +151,10 @@ void common_hal_displayio_release_displays(void) {
         #if CIRCUITPY_SHARPDISPLAY
         } else if (displays[i].bus_base.type == &sharpdisplay_framebuffer_type) {
             common_hal_sharpdisplay_framebuffer_deinit(&displays[i].sharpdisplay);
+        #endif
+        #if CIRCUITPY_DOTCLOCKDISPLAY
+        } else if (displays[i].bus_base.type == &dotclockdisplay_framebuffer_type) {
+            common_hal_dotclockdisplay_framebuffer_deinit(&displays[i].dotclockdisplay);
         #endif
         #if CIRCUITPY_VIDEOCORE
         } else if (displays[i].bus_base.type == &videocore_framebuffer_type) {
@@ -257,6 +265,11 @@ void reset_displays(void) {
             sharpdisplay_framebuffer_obj_t *sharp = &displays[i].sharpdisplay;
             common_hal_sharpdisplay_framebuffer_reset(sharp);
         #endif
+            // #if CIRCUITPY_DOTCLOCKDISPLAY
+            // } else if (displays[i].bus_base.type == &dotclockdisplay_framebuffer_type) {
+            //     dotclockdisplay_framebuffer_obj_t *dotclock = &displays[i].dotclockdisplay;
+            //     common_hal_dotclockdisplay_framebuffer_reset(dotclock);
+            // #endif
         #if CIRCUITPY_VIDEOCORE
         } else if (displays[i].bus_base.type == &videocore_framebuffer_type) {
             videocore_framebuffer_obj_t *vc = &displays[i].videocore;
@@ -303,6 +316,11 @@ void displayio_gc_collect(void) {
         #if CIRCUITPY_SHARPDISPLAY
         if (displays[i].bus_base.type == &sharpdisplay_framebuffer_type) {
             common_hal_sharpdisplay_framebuffer_collect_ptrs(&displays[i].sharpdisplay);
+        }
+        #endif
+        #if CIRCUITPY_DOTCLOCKDISPLAY
+        if (displays[i].bus_base.type == &dotclockdisplay_framebuffer_type) {
+            common_hal_dotclockdisplay_framebuffer_collect_ptrs(&displays[i].dotclockdisplay);
         }
         #endif
 

@@ -45,6 +45,12 @@
 #include "shared-module/sharpdisplay/SharpMemoryFramebuffer.h"
 #endif
 
+#if CIRCUITPY_DOTCLOCKDISPLAY
+#include "shared-module/displayio/__init__.h"
+#include "shared-bindings/dotclockdisplay/DotClockFramebuffer.h"
+#include "shared-module/dotclockdisplay/DotClockFramebuffer.h"
+#endif
+
 #if CIRCUITPY_REPL_LOGO
 extern uint32_t blinka_bitmap_data[];
 extern displayio_bitmap_t blinka_bitmap;

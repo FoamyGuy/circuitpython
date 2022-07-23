@@ -40,7 +40,8 @@ extern const mp_obj_type_t framebufferio_framebufferdisplay_type;
 void common_hal_framebufferio_framebufferdisplay_construct(framebufferio_framebufferdisplay_obj_t *self,
     mp_obj_t framebuffer,
     uint16_t rotation,
-    bool auto_refresh);
+    bool auto_refresh,
+    bool force_refresh);
 
 bool common_hal_framebufferio_framebufferdisplay_show(framebufferio_framebufferdisplay_obj_t *self,
     displayio_group_t *root_group);
@@ -49,6 +50,9 @@ bool common_hal_framebufferio_framebufferdisplay_refresh(framebufferio_framebuff
 
 bool common_hal_framebufferio_framebufferdisplay_get_auto_refresh(framebufferio_framebufferdisplay_obj_t *self);
 void common_hal_framebufferio_framebufferdisplay_set_auto_refresh(framebufferio_framebufferdisplay_obj_t *self, bool auto_refresh);
+
+bool common_hal_framebufferio_framebufferdisplay_get_force_refresh(framebufferio_framebufferdisplay_obj_t *self);
+void common_hal_framebufferio_framebufferdisplay_set_force_refresh(framebufferio_framebufferdisplay_obj_t *self, bool force_refresh);
 
 uint16_t common_hal_framebufferio_framebufferdisplay_get_width(framebufferio_framebufferdisplay_obj_t *self);
 uint16_t common_hal_framebufferio_framebufferdisplay_get_height(framebufferio_framebufferdisplay_obj_t *self);

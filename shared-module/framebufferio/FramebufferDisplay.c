@@ -48,9 +48,11 @@
 void common_hal_framebufferio_framebufferdisplay_construct(framebufferio_framebufferdisplay_obj_t *self,
     mp_obj_t framebuffer,
     uint16_t rotation,
-    bool auto_refresh) {
+    bool auto_refresh,
+    bool force_refresh) {
     // Turn off auto-refresh as we init.
     self->auto_refresh = false;
+    self->force_refresh = force_refresh;
     self->framebuffer = framebuffer;
     self->framebuffer_protocol = mp_proto_get_or_throw(MP_QSTR_protocol_framebuffer, framebuffer);
 
@@ -88,7 +90,7 @@ void common_hal_framebufferio_framebufferdisplay_construct(framebufferio_framebu
 
     self->first_manual_refresh = !auto_refresh;
 
-    self->native_frames_per_second = fb_getter_default(get_native_frames_per_second, 60);
+    self->native_frames_per_second = fb_getter_default(get_native_frames_per_second, 30);
     self->native_ms_per_frame = 1000 / self->native_frames_per_second;
 
     if (rotation != 0) {
@@ -259,7 +261,8 @@ STATIC void _refresh_display(framebufferio_framebufferdisplay_obj_t *self) {
     }
     displayio_display_core_start_refresh(&self->core);
     const displayio_area_t *current_area = _get_refresh_areas(self);
-    if (current_area) {
+    if (current_area || self->force_refresh) {
+
         uint8_t dirty_row_bitmask[(self->core.height + 7) / 8];
         memset(dirty_row_bitmask, 0, sizeof(dirty_row_bitmask));
         self->framebuffer_protocol->get_bufinfo(self->framebuffer, &self->bufinfo);
@@ -337,6 +340,16 @@ void common_hal_framebufferio_framebufferdisplay_set_auto_refresh(framebufferio_
     self->auto_refresh = auto_refresh;
 }
 
+bool common_hal_framebufferio_framebufferdisplay_get_force_refresh(framebufferio_framebufferdisplay_obj_t *self) {
+    return self->force_refresh;
+}
+
+void common_hal_framebufferio_framebufferdisplay_set_force_refresh(framebufferio_framebufferdisplay_obj_t *self,
+    bool force_refresh) {
+
+    self->force_refresh = force_refresh;
+}
+
 STATIC void _update_backlight(framebufferio_framebufferdisplay_obj_t *self) {
     // TODO(tannewt): Fade the backlight based on it's existing value and a target value. The target
     // should account for ambient light when possible.
@@ -352,6 +365,7 @@ void framebufferio_framebufferdisplay_background(framebufferio_framebufferdispla
 
 void release_framebufferdisplay(framebufferio_framebufferdisplay_obj_t *self) {
     common_hal_framebufferio_framebufferdisplay_set_auto_refresh(self, false);
+    common_hal_framebufferio_framebufferdisplay_set_force_refresh(self, false);
     release_display_core(&self->core);
     self->framebuffer_protocol->deinit(self->framebuffer);
     self->base.type = &mp_type_NoneType;
@@ -366,6 +380,7 @@ void framebufferio_framebufferdisplay_reset(framebufferio_framebufferdisplay_obj
     const mp_obj_type_t *fb_type = mp_obj_get_type(self->framebuffer);
     if (fb_type != NULL && fb_type != &mp_type_NoneType) {
         common_hal_framebufferio_framebufferdisplay_set_auto_refresh(self, true);
+        common_hal_framebufferio_framebufferdisplay_set_force_refresh(self, false);
         common_hal_framebufferio_framebufferdisplay_show(self, NULL);
         self->core.full_refresh = true;
     } else {

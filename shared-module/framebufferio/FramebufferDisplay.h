@@ -50,6 +50,7 @@ typedef struct {
     uint16_t first_pixel_offset;
     uint16_t row_stride;
     bool auto_refresh;
+    bool force_refresh;
     bool first_manual_refresh;
 } framebufferio_framebufferdisplay_obj_t;
 

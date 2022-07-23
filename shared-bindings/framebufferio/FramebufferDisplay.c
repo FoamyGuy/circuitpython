@@ -56,11 +56,12 @@
 //|         ...
 //|
 STATIC mp_obj_t framebufferio_framebufferdisplay_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, const mp_obj_t *all_args) {
-    enum { ARG_framebuffer, ARG_rotation, ARG_auto_refresh, NUM_ARGS };
+    enum { ARG_framebuffer, ARG_rotation, ARG_auto_refresh, ARG_force_refresh, NUM_ARGS };
     static const mp_arg_t allowed_args[] = {
         { MP_QSTR_framebuffer, MP_ARG_REQUIRED | MP_ARG_OBJ },
         { MP_QSTR_rotation, MP_ARG_INT | MP_ARG_KW_ONLY, {.u_int = 0} },
         { MP_QSTR_auto_refresh, MP_ARG_BOOL | MP_ARG_KW_ONLY, {.u_bool = true} },
+        { MP_QSTR_force_refresh, MP_ARG_BOOL | MP_ARG_KW_ONLY, {.u_bool = false} },
     };
     MP_STATIC_ASSERT(MP_ARRAY_SIZE(allowed_args) == NUM_ARGS);
     mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
@@ -80,7 +81,8 @@ STATIC mp_obj_t framebufferio_framebufferdisplay_make_new(const mp_obj_type_t *t
         self,
         framebuffer,
         rotation,
-        args[ARG_auto_refresh].u_bool
+        args[ARG_auto_refresh].u_bool,
+        args[ARG_force_refresh].u_bool
         );
 
     return self;
@@ -171,6 +173,30 @@ MP_DEFINE_CONST_FUN_OBJ_2(framebufferio_framebufferdisplay_set_auto_refresh_obj,
 MP_PROPERTY_GETSET(framebufferio_framebufferdisplay_auto_refresh_obj,
     (mp_obj_t)&framebufferio_framebufferdisplay_get_auto_refresh_obj,
     (mp_obj_t)&framebufferio_framebufferdisplay_set_auto_refresh_obj);
+
+
+//|     force_refresh: bool
+//|     """If True force the display to refresh even if there are no dirty areas."""
+//|
+STATIC mp_obj_t framebufferio_framebufferdisplay_obj_get_force_refresh(mp_obj_t self_in) {
+    framebufferio_framebufferdisplay_obj_t *self = native_display(self_in);
+    return mp_obj_new_bool(common_hal_framebufferio_framebufferdisplay_get_force_refresh(self));
+}
+MP_DEFINE_CONST_FUN_OBJ_1(framebufferio_framebufferdisplay_get_force_refresh_obj, framebufferio_framebufferdisplay_obj_get_force_refresh);
+
+STATIC mp_obj_t framebufferio_framebufferdisplay_obj_set_force_refresh(mp_obj_t self_in, mp_obj_t force_refresh) {
+    framebufferio_framebufferdisplay_obj_t *self = native_display(self_in);
+
+    common_hal_framebufferio_framebufferdisplay_set_force_refresh(self, mp_obj_is_true(force_refresh));
+
+    return mp_const_none;
+}
+MP_DEFINE_CONST_FUN_OBJ_2(framebufferio_framebufferdisplay_set_force_refresh_obj, framebufferio_framebufferdisplay_obj_set_force_refresh);
+
+MP_PROPERTY_GETSET(framebufferio_framebufferdisplay_force_refresh_obj,
+    (mp_obj_t)&framebufferio_framebufferdisplay_get_force_refresh_obj,
+    (mp_obj_t)&framebufferio_framebufferdisplay_set_force_refresh_obj);
+
 
 //|     brightness: float
 //|     """The brightness of the display as a float. 0.0 is off and 1.0 is full brightness. When
@@ -372,6 +398,7 @@ STATIC const mp_rom_map_elem_t framebufferio_framebufferdisplay_locals_dict_tabl
     { MP_ROM_QSTR(MP_QSTR_fill_row), MP_ROM_PTR(&framebufferio_framebufferdisplay_fill_row_obj) },
 
     { MP_ROM_QSTR(MP_QSTR_auto_refresh), MP_ROM_PTR(&framebufferio_framebufferdisplay_auto_refresh_obj) },
+    { MP_ROM_QSTR(MP_QSTR_force_refresh), MP_ROM_PTR(&framebufferio_framebufferdisplay_force_refresh_obj) },
 
     { MP_ROM_QSTR(MP_QSTR_brightness), MP_ROM_PTR(&framebufferio_framebufferdisplay_brightness_obj) },
     { MP_ROM_QSTR(MP_QSTR_auto_brightness), MP_ROM_PTR(&framebufferio_framebufferdisplay_auto_brightness_obj) },

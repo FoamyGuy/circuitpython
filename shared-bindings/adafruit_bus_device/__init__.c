@@ -62,7 +62,10 @@ const mp_obj_module_t adafruit_bus_device_spi_device_module = {
 //| The I2CDevice and SPIDevice helper classes make managing transaction state on a bus easy.
 //| For example, they manage locking the bus to prevent other concurrent access. For SPI
 //| devices, it manages the chip select and protocol changes such as mode. For I2C, it
-//| manages the device address."""
+//| manages the device address. Learn more about `SPI
+//| <https://learn.adafruit.com/circuitpython-basics-i2c-and-spi/spi-devices#spidevice-library-2837757>`_
+//| and `I2C <https://learn.adafruit.com/circuitpython-basics-i2c-and-spi/i2c-devices#i2cdevice-library-2837726>`_
+//| usage on these learn guide pages."""
 STATIC const mp_rom_map_elem_t adafruit_bus_device_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR___name__), MP_ROM_QSTR(MP_QSTR_adafruit_bus_device) },
     { MP_ROM_QSTR(MP_QSTR_i2c_device),   MP_ROM_PTR(&adafruit_bus_device_i2c_device_module) },

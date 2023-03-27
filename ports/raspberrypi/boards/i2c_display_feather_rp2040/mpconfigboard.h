@@ -12,3 +12,7 @@
 
 #define DEFAULT_UART_BUS_RX (&pin_GPIO1)
 #define DEFAULT_UART_BUS_TX (&pin_GPIO0)
+
+// Enable the use of 2 displays
+
+#define CIRCUITPY_DISPLAY_LIMIT (2)

@@ -46,4 +46,6 @@
 
 #define DOUBLE_TAP_PIN (&pin_GPIO38)
 
+#define ENABLE_JTAG 0
+
 #define CIRCUITPY_DISPLAY_LIMIT (2)

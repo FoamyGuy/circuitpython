@@ -435,12 +435,21 @@ void release_display(displayio_display_obj_t *self) {
 }
 
 void reset_display(displayio_display_obj_t *self) {
+    mp_printf(&mp_plat_print, "inside reset_display()\n");
     common_hal_displayio_display_set_auto_refresh(self, true);
-    circuitpython_splash.x = 0; // reset position in case someone moved it.
-    circuitpython_splash.y = 0;
-    supervisor_start_terminal(self->core.width, self->core.height);
+
+
     if (!circuitpython_splash.in_group) {
+        circuitpython_splash.x = 0; // reset position in case someone moved it.
+        circuitpython_splash.y = 0;
+
+        mp_printf(&mp_plat_print, "after auto refresh and x,y\n");
+        supervisor_start_terminal(self->core.width, self->core.height);
+        mp_printf(&mp_plat_print, "after start terminal \n");
+
+        mp_printf(&mp_plat_print, "cp_spash was not in_group \n");
         common_hal_displayio_display_set_root_group(self, &circuitpython_splash);
+        mp_printf(&mp_plat_print, "cp_spash set as root group \n");
     }
 }
 

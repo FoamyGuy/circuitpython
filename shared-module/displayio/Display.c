@@ -63,9 +63,11 @@ void common_hal_displayio_display_construct(displayio_display_obj_t *self,
         ram_width = 0xff;
         ram_height = 0xff;
     }
+
+    mp_printf(&mp_plat_print, "befroe core construct\n");
     displayio_display_core_construct(&self->core, bus, width, height, ram_width, ram_height, colstart, rowstart, rotation,
         color_depth, grayscale, pixels_in_byte_share_row, bytes_per_cell, reverse_pixels_in_byte, reverse_bytes_in_word);
-
+    mp_printf(&mp_plat_print, "after core construct\n");
     self->set_column_command = set_column_command;
     self->set_row_command = set_row_command;
     self->write_ram_command = write_ram_command;
@@ -136,16 +138,23 @@ void common_hal_displayio_display_construct(displayio_display_obj_t *self,
 
     // Set the group after initialization otherwise we may send pixels while we delay in
     // initialization.
+    mp_printf(&mp_plat_print, "about to check if splash in_group\n");
     if (!circuitpython_splash.in_group) {
+        mp_printf(&mp_plat_print, "setting circuitpython_splash to root_group\n");
         common_hal_displayio_display_set_root_group(self, &circuitpython_splash);
+        mp_printf(&mp_plat_print, "after setting circuitpython_splash to root_group\n");
     }
     common_hal_displayio_display_set_auto_refresh(self, auto_refresh);
+    mp_printf(&mp_plat_print, "end of construct()\n");
 }
 
 bool common_hal_displayio_display_show(displayio_display_obj_t *self, displayio_group_t *root_group) {
+    mp_printf(&mp_plat_print, "beginning of show()\n");
     if (root_group == NULL) {
+        mp_printf(&mp_plat_print, "root_group was NULL, using circuitpython_splash\n");
         root_group = &circuitpython_splash;
     }
+    mp_printf(&mp_plat_print, "calling to set_root_group()\n");
     return displayio_display_core_set_root_group(&self->core, root_group);
 }
 
@@ -438,8 +447,13 @@ void reset_display(displayio_display_obj_t *self) {
     common_hal_displayio_display_set_auto_refresh(self, true);
     circuitpython_splash.x = 0; // reset position in case someone moved it.
     circuitpython_splash.y = 0;
-    supervisor_start_terminal(self->core.width, self->core.height);
+
     if (!circuitpython_splash.in_group) {
+        mp_printf(&mp_plat_print, "b4 supervisor_start_terminal()\n");
+        supervisor_start_terminal(self->core.width, self->core.height);
+        mp_printf(&mp_plat_print, "after supervisor_start_terminal()\n");
+
+        mp_printf(&mp_plat_print, "splash was not in group setting root to splash\n");
         common_hal_displayio_display_set_root_group(self, &circuitpython_splash);
     }
 }

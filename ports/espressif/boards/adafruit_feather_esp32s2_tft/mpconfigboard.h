@@ -45,3 +45,6 @@
 #define DEFAULT_UART_BUS_TX (&pin_GPIO1)
 
 #define DOUBLE_TAP_PIN (&pin_GPIO38)
+
+#define ENABLE_JTAG 0
+#define CIRCUITPY_DISPLAY_LIMIT (2)

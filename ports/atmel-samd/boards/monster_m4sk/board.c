@@ -48,6 +48,10 @@ uint8_t display_init_sequence[] = {
 };
 
 void board_init(void) {
+//    mp_printf(&mp_plat_print, "beginning of board_init()\n");
+//    common_hal_displayio_release_displays();
+//    mp_printf(&mp_plat_print, "after release_displays in board_init()\n");
+
     busio_spi_obj_t *spi = &displays[0].fourwire_bus.inline_bus;
     common_hal_busio_spi_construct(spi, &pin_PA13, &pin_PA12, NULL, false);
     common_hal_busio_spi_never_reset(spi);

@@ -31,6 +31,9 @@
 #include "shared-bindings/displayio/FourWire.h"
 #include "shared-bindings/microcontroller/Pin.h"
 #include "shared-module/displayio/__init__.h"
+#include "shared-module/sdcardio/SDCard.h"
+#include "shared-bindings/sdcardio/SDCard.h"
+#include "extmod/vfs_fat.h"
 #include "shared-bindings/board/__init__.h"
 #include "supervisor/shared/board.h"
 
@@ -64,6 +67,26 @@ const uint8_t refresh_sequence[] = {
 void board_init(void) {
     displayio_fourwire_obj_t *bus = &allocate_display_bus()->fourwire_bus;
     busio_spi_obj_t *spi = common_hal_board_create_spi(0);
+
+    mp_printf(&mp_plat_print, "attempting to init sdcard \n");
+    //sdcardio_sdcard_obj_t *sdcard_self = m_new_obj(sdcardio_sdcard_obj_t);
+
+    //(void)sdcard_self;
+    //mp_printf(&mp_plat_print, (mp_obj_t)sdcard_self);
+    mp_printf(&mp_plat_print, "created sd_self \n");
+    //sdcard_self->base.type = &sdcardio_SDCard_type;
+    mp_printf(&mp_plat_print, "set sd_self type \n");
+    // SD_CS pin_GPIO22
+    //common_hal_sdcardio_sdcard_construct(sdcard_self, spi, &pin_GPIO22, 8000000);
+    //mp_printf(&mp_plat_print, "after sdcard_construct \n");
+
+    //mp_obj_t vfs = mp_fat_vfs_type.make_new(&mp_fat_vfs_type, 1, 0, (mp_obj_t)sdcard_self);
+    //mp_printf(&mp_plat_print, "after vfs make_new \n");
+
+
+
+
+    //mp_printf(&mp_plat_print, vfs);
 
     bus->base.type = &displayio_fourwire_type;
     common_hal_displayio_fourwire_construct(bus,

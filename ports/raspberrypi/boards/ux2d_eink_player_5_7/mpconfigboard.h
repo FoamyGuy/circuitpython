@@ -1,4 +1,4 @@
-#define MICROPY_HW_BOARD_NAME "Pimoroni Inky Frame 5.7"
+#define MICROPY_HW_BOARD_NAME "UX2D E-Ink Player 5.7"
 #define MICROPY_HW_MCU_NAME "rp2040"
 
 #define CIRCUITPY_DIGITALIO_HAVE_INVALID_PULL (1)

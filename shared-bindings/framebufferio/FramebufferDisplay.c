@@ -271,8 +271,8 @@ static mp_obj_t framebufferio_framebufferdisplay_obj_fill_row(size_t n_args, con
     if (bufinfo.typecode != BYTEARRAY_TYPECODE) {
         mp_raise_ValueError(MP_ERROR_TEXT("Buffer is not a bytearray."));
     }
-    if (self->core.colorspace.depth != 16) {
-        mp_raise_ValueError(MP_ERROR_TEXT("Display must have a 16 bit colorspace."));
+    if (self->core.colorspace.depth != 16 && self->core.colorspace.depth != 8) {
+      mp_raise_ValueError(MP_ERROR_TEXT("Display must have an 8 or 16 bit colorspace."));
     }
 
     displayio_area_t area = {

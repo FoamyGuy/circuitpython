@@ -446,8 +446,8 @@ static mp_obj_t busdisplay_busdisplay_obj_fill_row(size_t n_args, const mp_obj_t
     mp_buffer_info_t bufinfo;
     mp_get_buffer_raise(result, &bufinfo, MP_BUFFER_WRITE);
 
-    if (self->core.colorspace.depth != 16) {
-        mp_raise_ValueError(MP_ERROR_TEXT("Display must have a 16 bit colorspace."));
+    if (self->core.colorspace.depth != 16 && self->core.colorspace.depth != 8) {
+      mp_raise_ValueError(MP_ERROR_TEXT("Display must have an 8 or 16 bit colorspace."));
     }
 
     displayio_area_t area = {

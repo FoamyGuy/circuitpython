@@ -419,7 +419,7 @@ static mp_obj_t bitmaptools_alphablend(size_t n_args, const mp_obj_t *pos_args, 
 MP_DEFINE_CONST_FUN_OBJ_KW(bitmaptools_alphablend_obj, 0, bitmaptools_alphablend);
 
 //| def replace_color(
-//|     dest_bitmap: displayio.Bitmap, old_color: int, new_color: int
+//|     bitmap: displayio.Bitmap, old_color: int, new_color: int
 //| ) -> None:
 //|     """Replace any pixels of ``old_color`` with ``new_color`` in the ``bitmap``
 //|
@@ -457,6 +457,55 @@ static mp_obj_t bitmaptools_obj_replace_color(size_t n_args, const mp_obj_t *pos
 }
 
 MP_DEFINE_CONST_FUN_OBJ_KW(bitmaptools_replace_color_obj, 0, bitmaptools_obj_replace_color);
+
+//| def outline(
+//|     dest_bitmap: displayio.Bitmap, stamp_bitmap: display.Bitmap, target_color: int,
+//| ) -> None:
+//|     """Add an outline around any pixels of ``target_color`` in ``dest_bitmap`` by
+//|     bliting ``stamp_bitmap`` over every instance of ``target_color`` pixel.
+//|     use a 3x3 bitmap to get a 1 pixel outline.
+//|
+//|     :param displayio.Bitmap dest_bitmap: Bitmap that will be changed
+//|     :param displayio.Bitmap stamp_bitmap: Bitmap that will blitted on
+//|       each of ``target_color`` pixels.
+//|     :param int target_color: Pixels of this Bitmap palette index
+//        will have the outline drawn around them."""
+//|     ...
+//|
+//|
+static mp_obj_t bitmaptools_obj_outline(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
+    enum {ARG_dest_bitmap, ARG_stamp_bitmap, ARG_target_color};
+
+    static const mp_arg_t allowed_args[] = {
+        {MP_QSTR_dest_bitmap, MP_ARG_REQUIRED | MP_ARG_OBJ},
+        {MP_QSTR_stamp_bitmap, MP_ARG_REQUIRED | MP_ARG_OBJ},
+        {MP_QSTR_target_color, MP_ARG_REQUIRED | MP_ARG_INT},
+
+    };
+    mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
+    mp_arg_parse_all(n_args, pos_args, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);
+
+
+    displayio_bitmap_t *destination = MP_OBJ_TO_PTR(mp_arg_validate_type(args[ARG_dest_bitmap].u_obj, &displayio_bitmap_type, MP_QSTR_bitmap));
+    displayio_bitmap_t *stamp = MP_OBJ_TO_PTR(mp_arg_validate_type(args[ARG_stamp_bitmap].u_obj, &displayio_bitmap_type, MP_QSTR_bitmap));
+
+
+    uint32_t target_color;
+    target_color = args[ARG_target_color].u_int;
+
+	uint32_t dest_color_depth, stamp_color_depth;
+    dest_color_depth = (1 << destination->bits_per_value);
+    stamp_color_depth = (1 << stamp->bits_per_value);
+    if (stamp_color_depth > dest_color_depth) {
+        mp_raise_ValueError_varg(MP_ERROR_TEXT("%q destination must have at least as many colors as stamp"), MP_QSTR_color);
+    }
+
+    common_hal_bitmaptools_outline(destination, stamp, target_color);
+
+    return mp_const_none;
+}
+
+MP_DEFINE_CONST_FUN_OBJ_KW(bitmaptools_outline_obj, 0, bitmaptools_obj_outline);
 
 //| def fill_region(
 //|     dest_bitmap: displayio.Bitmap, x1: int, y1: int, x2: int, y2: int, value: int
@@ -1144,6 +1193,7 @@ static const mp_rom_map_elem_t bitmaptools_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_arrayblit), MP_ROM_PTR(&bitmaptools_arrayblit_obj) },
     { MP_ROM_QSTR(MP_QSTR_alphablend), MP_ROM_PTR(&bitmaptools_alphablend_obj) },
     { MP_ROM_QSTR(MP_QSTR_replace_color), MP_ROM_PTR(&bitmaptools_replace_color_obj) },
+    { MP_ROM_QSTR(MP_QSTR_outline), MP_ROM_PTR(&bitmaptools_outline_obj) },
     { MP_ROM_QSTR(MP_QSTR_fill_region), MP_ROM_PTR(&bitmaptools_fill_region_obj) },
     { MP_ROM_QSTR(MP_QSTR_boundary_fill), MP_ROM_PTR(&bitmaptools_boundary_fill_obj) },
     { MP_ROM_QSTR(MP_QSTR_draw_line), MP_ROM_PTR(&bitmaptools_draw_line_obj) },

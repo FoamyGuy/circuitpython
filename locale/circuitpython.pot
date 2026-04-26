@@ -218,7 +218,7 @@ msgstr ""
 msgid "%q must be array of type 'h'"
 msgstr ""
 
-#: shared-bindings/audiobusio/PDMIn.c
+#: shared-bindings/audiobusio/I2SIn.c shared-bindings/audiobusio/PDMIn.c
 msgid "%q must be multiple of 8."
 msgstr ""
 
@@ -803,7 +803,7 @@ msgstr ""
 msgid "Cannot pull on input-only pin."
 msgstr ""
 
-#: shared-bindings/audiobusio/PDMIn.c
+#: shared-bindings/audiobusio/I2SIn.c shared-bindings/audiobusio/PDMIn.c
 msgid "Cannot record to a file"
 msgstr ""
 
@@ -923,7 +923,7 @@ msgstr ""
 msgid "Deep sleep pins must use a rising edge with pulldown"
 msgstr ""
 
-#: shared-bindings/audiobusio/PDMIn.c
+#: shared-bindings/audiobusio/I2SIn.c shared-bindings/audiobusio/PDMIn.c
 msgid "Destination capacity is smaller than destination_length."
 msgstr ""
 
@@ -1802,6 +1802,7 @@ msgstr ""
 msgid "Parameter error"
 msgstr ""
 
+#: ports/espressif/common-hal/audiobusio/I2SIn.c
 #: ports/espressif/common-hal/audiobusio/__init__.c
 msgid "Peripheral in use"
 msgstr ""
@@ -2692,6 +2693,7 @@ msgstr ""
 msgid "binary op %q not implemented"
 msgstr ""
 
+#: ports/espressif/common-hal/audiobusio/I2SIn.c
 #: ports/espressif/common-hal/audiobusio/PDMIn.c
 msgid "bit_depth must be 8, 16, 24, or 32."
 msgstr ""
@@ -3084,13 +3086,18 @@ msgstr ""
 msgid "default is not a function"
 msgstr ""
 
-#: shared-bindings/audiobusio/PDMIn.c
+#: shared-bindings/audiobusio/I2SIn.c shared-bindings/audiobusio/PDMIn.c
 msgid ""
 "destination buffer must be a bytearray or array of type 'B' for bit_depth = 8"
 msgstr ""
 
-#: shared-bindings/audiobusio/PDMIn.c
+#: shared-bindings/audiobusio/I2SIn.c shared-bindings/audiobusio/PDMIn.c
 msgid "destination buffer must be an array of type 'H' for bit_depth = 16"
+msgstr ""
+
+#: shared-bindings/audiobusio/I2SIn.c
+msgid ""
+"destination buffer must be an array of type 'I' for bit_depth = 24 or 32"
 msgstr ""
 
 #: py/objdict.c
@@ -4049,7 +4056,7 @@ msgstr ""
 msgid "output array must be contiguous"
 msgstr ""
 
-#: py/objint_mpz.c
+#: py/objint_longlong.c py/objint_mpz.c
 msgid "overflow converting long int to machine word"
 msgstr ""
 

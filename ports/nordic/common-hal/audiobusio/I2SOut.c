@@ -189,6 +189,32 @@ static void i2s_buffer_fill(audiobusio_i2sout_obj_t *self) {
     }
 }
 
+static void i2s_stop_peripheral(void) {
+    NRF_I2S->INTENCLR = I2S_INTENSET_TXPTRUPD_Msk;
+    if (NRF_I2S->ENABLE == I2S_ENABLE_ENABLE_Enabled) {
+        NRF_I2S->TASKS_STOP = 1;
+        uint64_t deadline = supervisor_ticks_ms64() + 100;
+        while (!NRF_I2S->EVENTS_STOPPED && supervisor_ticks_ms64() < deadline) {
+        }
+    }
+    NRF_I2S->ENABLE = I2S_ENABLE_ENABLE_Disabled;
+    NRF_I2S->EVENTS_STOPPED = 0;
+    NRF_I2S->EVENTS_TXPTRUPD = 0;
+    NVIC_ClearPendingIRQ(I2S_IRQn);
+}
+
+static void i2s_free_buffers(audiobusio_i2sout_obj_t *self) {
+    for (size_t i = 0; i < MP_ARRAY_SIZE(self->buffers); i++) {
+        #if MICROPY_MALLOC_USES_ALLOCATED_SIZE
+        m_free(self->buffers[i], self->buffer_length);
+        #else
+        m_free(self->buffers[i]);
+        #endif
+        self->buffers[i] = NULL;
+    }
+    self->buffer_length = 0;
+}
+
 void common_hal_audiobusio_i2sout_construct(audiobusio_i2sout_obj_t *self,
     const mcu_pin_obj_t *bit_clock, const mcu_pin_obj_t *word_select,
     const mcu_pin_obj_t *data, const mcu_pin_obj_t *main_clock, bool left_justified,
@@ -200,6 +226,10 @@ void common_hal_audiobusio_i2sout_construct(audiobusio_i2sout_obj_t *self,
         mp_raise_RuntimeError(MP_ERROR_TEXT("Device in use"));
     }
     instance = self;
+
+    self->buffers[0] = NULL;
+    self->buffers[1] = NULL;
+    self->buffer_length = 0;
 
     claim_pin(bit_clock);
     claim_pin(word_select);
@@ -239,8 +269,9 @@ void common_hal_audiobusio_i2sout_deinit(audiobusio_i2sout_obj_t *self) {
     if (common_hal_audiobusio_i2sout_deinited(self)) {
         return;
     }
-    NRF_I2S->TASKS_STOP = 1;
-    NRF_I2S->ENABLE = I2S_ENABLE_ENABLE_Disabled;
+    i2s_stop_peripheral();
+    self->playing = false;
+    i2s_free_buffers(self);
     if (self->external_clock) {
         nrf_gpio_cfg_default(self->bit_clock_pin_number);
         nrf_gpio_cfg_default(self->word_select_pin_number);
@@ -257,9 +288,7 @@ void common_hal_audiobusio_i2sout_deinit(audiobusio_i2sout_obj_t *self) {
 
 void common_hal_audiobusio_i2sout_play(audiobusio_i2sout_obj_t *self,
     mp_obj_t sample, bool loop) {
-    if (common_hal_audiobusio_i2sout_get_playing(self)) {
-        common_hal_audiobusio_i2sout_stop(self);
-    }
+    common_hal_audiobusio_i2sout_stop(self);
 
     audiosample_check(sample);
 
@@ -336,9 +365,10 @@ bool common_hal_audiobusio_i2sout_get_paused(audiobusio_i2sout_obj_t *self) {
 }
 
 void common_hal_audiobusio_i2sout_stop(audiobusio_i2sout_obj_t *self) {
-    NRF_I2S->TASKS_STOP = 1;
     self->stopping = true;
-    NRF_I2S->INTENCLR = I2S_INTENSET_TXPTRUPD_Msk;
+    i2s_stop_peripheral();
+    self->playing = false;
+    i2s_free_buffers(self);
 }
 
 bool common_hal_audiobusio_i2sout_get_playing(audiobusio_i2sout_obj_t *self) {

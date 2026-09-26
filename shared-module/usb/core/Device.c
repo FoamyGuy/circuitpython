@@ -460,6 +460,10 @@ static bool _open_endpoint(usb_core_device_obj_t *self, mp_int_t endpoint) {
     return open;
 }
 
+bool common_hal_usb_core_device_open_endpoint(usb_core_device_obj_t *self, mp_int_t endpoint) {
+    return _open_endpoint(self, endpoint);
+}
+
 mp_int_t common_hal_usb_core_device_write(usb_core_device_obj_t *self, mp_int_t endpoint, const uint8_t *buffer, mp_int_t len, mp_int_t timeout) {
     if (!_open_endpoint(self, endpoint)) {
         mp_raise_usb_core_USBError(NULL);
